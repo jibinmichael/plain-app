@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(mv build-spine.md /tmp/build-spine.md)",
+      "Bash(npx --yes create-next-app@latest . --typescript --tailwind --app --eslint --src-dir --import-alias \"@/*\" --no-turbopack --use-npm --yes)"
+    ],
+    "additionalDirectories": [
+      "/tmp"
+    ]
+  }
+}
