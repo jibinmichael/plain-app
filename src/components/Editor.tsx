@@ -67,6 +67,7 @@ import MicroBreakdown from "./MicroBreakdown";
 const PAUSE_MS = 250;
 const SAVE_MS = 500;
 const CONCEPT_MS = 1200;
+const HIGHLIGHT_MS = 2000; // auto-highlight key points (longest debounce — calm)
 const SEED_KEY = "seed-version";
 const SEED_VER = "v0.5-ami";
 // v2.1 — auto-linking whispers. The very first auto-created page ever earns a
@@ -140,6 +141,9 @@ export default function Editor() {
   const abortRef = useRef<AbortController | null>(null);
   const conceptAbort = useRef<AbortController | null>(null);
   const lastConceptText = useRef("");
+  const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const highlightAbort = useRef<AbortController | null>(null);
+  const lastHighlightText = useRef("");
   const loading = useRef(true);
   const scrollEl = useRef<HTMLElement | null>(null);
   const activeKind = useRef<NoteRecord["kind"]>("written");
@@ -431,6 +435,23 @@ export default function Editor() {
     [editor]
   );
 
+  // Apply a key-point highlight to a span without disturbing the cursor (mirrors
+  // applyRef). Skips ranges already highlighted so re-runs don't stack.
+  const applyHighlight = useCallback(
+    (from: number, to: number) => {
+      if (!editor) return;
+      const hl = editor.state.schema.marks.highlight;
+      if (!hl) return;
+      const max = editor.state.doc.content.size;
+      if (from < 0 || to > max || from >= to) return;
+      if (editor.state.doc.rangeHasMark(from, to, hl)) return;
+      const tr = editor.state.tr.addMark(from, to, hl.create({}));
+      tr.setMeta("addToHistory", false);
+      editor.view.dispatch(tr);
+    },
+    [editor]
+  );
+
   // Show one quiet whisper; it self-dismisses after `ms`. A newer whisper
   // replaces an older one (no stacking). `tappable` makes the line a tap target.
   const showWhisper = useCallback(
@@ -589,6 +610,56 @@ export default function Editor() {
       if (conceptTimer.current) clearTimeout(conceptTimer.current);
     };
   }, [editor, processConcepts]);
+
+  // Auto-highlight key points: ask /api/mark for the most important phrases and
+  // give each a soft background, so the eye lands on what matters. Link-style
+  // pass (addToHistory:false, skips already-marked) — never disturbs typing.
+  const processHighlights = useCallback(async () => {
+    if (!editor || loading.current) return;
+    if (activeKind.current === "micro") return;
+    if (!navigator.onLine) return;
+    const text = editor.getText({ blockSeparator: "\n" });
+    if (text.trim().length < 12) return;
+    if (text === lastHighlightText.current) return; // only re-run on real changes
+    lastHighlightText.current = text;
+    highlightAbort.current?.abort();
+    const ctrl = new AbortController();
+    highlightAbort.current = ctrl;
+    let spans: { text: string }[] = [];
+    try {
+      const res = await fetch("/api/mark", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text }),
+        signal: ctrl.signal,
+      });
+      spans = ((await res.json()).spans as typeof spans) || [];
+    } catch {
+      return;
+    }
+    if (!editor) return;
+    const hl = editor.state.schema.marks.highlight;
+    if (!hl) return;
+    for (const s of spans) {
+      const phrase = (s.text || "").trim();
+      if (phrase.length < 2) continue;
+      const r = findPhrase(editor.state.doc, phrase, hl);
+      if (r) applyHighlight(r.from, r.to);
+    }
+  }, [editor, applyHighlight]);
+
+  useEffect(() => {
+    if (!editor) return;
+    const run = () => {
+      if (highlightTimer.current) clearTimeout(highlightTimer.current);
+      highlightTimer.current = setTimeout(() => processHighlights(), HIGHLIGHT_MS);
+    };
+    editor.on("update", run);
+    return () => {
+      editor.off("update", run);
+      if (highlightTimer.current) clearTimeout(highlightTimer.current);
+    };
+  }, [editor, processHighlights]);
 
   const onOpen = useCallback(
     async (noteId: string, opts?: { back?: boolean }) => {

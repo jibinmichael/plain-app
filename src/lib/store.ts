@@ -1,5 +1,7 @@
 import { get, set, del, clear } from "idb-keyval";
 import type { JSONContent } from "@tiptap/core";
+import type { GenPref } from "./genPref";
+import type { FlowSpec } from "./flow";
 
 /**
  * Document model + connection graph, persisted in IndexedDB (survives refresh,
@@ -36,6 +38,7 @@ export type NoteBreakdown = {
   markdown: string; // the generated note body, as markdown
   sources: string[]; // cited note/source titles ("from your notes · …")
   webSources?: WebSource[]; // real web citations (numbered SOURCES list)
+  flow?: FlowSpec; // v3.6: when the concept is a process → an editable flowchart
   generatedAt: number;
 };
 
@@ -51,7 +54,11 @@ export type NoteRecord = {
   kind?: NoteKind; // undefined = legacy = "written"
   gist?: string; // one-line summary stored on spawn (breakdown is lazy)
   archived?: boolean;
-  breakdown?: NoteBreakdown; // cached micro-note breakdown (lazy)
+  breakdown?: NoteBreakdown; // legacy single cached breakdown (kept for migration)
+  // v3.6: one cached breakdown PER (level, style) combo (keyed by comboKey) so
+  // switching depth/style is instant after first generation.
+  breakdowns?: Record<string, NoteBreakdown>;
+  gen?: GenPref; // this note's per-note level/style override (beats the global default)
 };
 
 const NOTE = (id: string) => `note:${id}`;
@@ -242,6 +249,28 @@ export async function setBreakdown(
   const rec = await getNote(id);
   if (!rec) return;
   rec.breakdown = breakdown;
+  await saveNote(rec);
+}
+
+/** v3.6: cache a breakdown for a specific (level, style) combo so switching
+ *  depth/style is instant after first generation. */
+export async function setBreakdownFor(
+  id: string,
+  key: string,
+  breakdown: NoteBreakdown
+): Promise<void> {
+  const rec = await getNote(id);
+  if (!rec) return;
+  rec.breakdowns = { ...(rec.breakdowns || {}), [key]: breakdown };
+  rec.breakdown = breakdown; // keep the legacy field pointing at the latest
+  await saveNote(rec);
+}
+
+/** v3.6: persist a note's per-note level/style override (beats the global default). */
+export async function setNoteGen(id: string, gen: GenPref): Promise<void> {
+  const rec = await getNote(id);
+  if (!rec) return;
+  rec.gen = gen;
   await saveNote(rec);
 }
 

@@ -74,8 +74,11 @@ function buildDecorations(doc: PMNode, cursor: number): DecorationSet {
             class: level === 1 ? "tok-title" : "tok-subheading",
           })
         );
-      } else {
-        // Empty heading → title / subheading placeholder.
+      } else if (active) {
+        // Empty heading → title / subheading placeholder, but ONLY when the
+        // caret is on this line (same rule as the body placeholder). Otherwise
+        // an untitled note showed a faint 17px/600 "Name this note" sitting at
+        // the top like a real heading — a "false heading" on scroll/reload.
         decorations.push(
           Decoration.node(pos, pos + node.nodeSize, {
             class: level === 1 ? "ph ph-title" : "ph ph-sub",

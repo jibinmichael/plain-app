@@ -1,8 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { rateLimited } from "@/lib/ratelimit";
+import type { Level, Style } from "@/lib/genPref";
 
 export const runtime = "nodejs";
+
+// v3.6 Part A — form follows content. The SAME atomic-note generator adapts to
+// two dials the student controls: how DEEP (level) and how SHAPED (style). These
+// change the FORM only — never invent facts (grounded-or-ghost still holds).
+const LEVEL_DIRECTIVE: Record<Level, string> = {
+  simple:
+    "DEPTH = SIMPLE (ELI5): short and plain. Everyday language, minimal jargon (define any term you must use), just the core gist. A bright 12-year-old should follow it.",
+  student:
+    "DEPTH = STUDENT (default working depth): balanced and clear — the useful core a student needs to understand and use the concept, accurate but not exhaustive.",
+  exam:
+    "DEPTH = EXAM (dense, exam-grade): precise and detailed. Include the key numbers, criteria, classifications, mechanisms and caveats an examiner expects. Tight, no padding.",
+};
+const STYLE_DIRECTIVE: Record<Style, string> = {
+  prose:
+    "SHAPE = PROSE: write in flowing paragraphs (full sentences). Use a checklist or table ONLY where the content genuinely demands it; otherwise prefer prose.",
+  bullets:
+    "SHAPE = BULLETS: write as tight bullet lines (\"- \"), one idea per line, minimal connective prose. Use a markdown table only for genuine comparisons/values.",
+};
 
 type Src = { title: string; markdown: string; tier?: string };
 
@@ -34,13 +53,20 @@ const STRUCTURE = `Write a single, well-structured ATOMIC note about the concept
   - a markdown table for comparisons / values / classifications,
   - "- " bullet lists where a list fits,
 - Do NOT start with the title (the app shows it). Do NOT use rigid fixed headings like "IN SIMPLE TERMS". You MAY use short "## " subheadings only if they genuinely help.
+- HIGHLIGHT the key points: wrap the 1–3 MOST important phrases (the core takeaways a reader must catch) in ==double equals==, e.g. "the SA node is ==the heart's natural pacemaker==". Highlight sparingly — only what truly matters, never whole sentences.
 - Plain markdown only. No preamble like "Here is a note". Keep it tight — a handful of blocks.`;
 
-function buildPrompt(grounded: boolean, sectionList: string): string {
+function form(level: Level, style: Style): string {
+  return `FORM (follow exactly — this shapes the note, never its facts):\n- ${LEVEL_DIRECTIVE[level]}\n- ${STYLE_DIRECTIVE[style]}`;
+}
+
+function buildPrompt(grounded: boolean, level: Level, style: Style): string {
   if (grounded) {
     return `You write a synthetic study note about ONE concept, grounded in the user's own SOURCES.
 
 ${STRUCTURE}
+
+${form(level, style)}
 
 Grounding rule:
 - Build the note from facts present in the SOURCES where possible.
@@ -51,8 +77,10 @@ Grounding rule:
 
 ${STRUCTURE}
 
+${form(level, style)}
+
 - Be accurate and concrete; this is a provisional note the user will review and keep or edit.
-- Do NOT include a SOURCES line.${sectionList ? "" : ""}`;
+- Do NOT include a SOURCES line.`;
 }
 
 export async function POST(req: NextRequest) {
@@ -63,13 +91,20 @@ export async function POST(req: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY)
     return NextResponse.json({ grounded: false, markdown: "", sources: [] });
 
-  const { concept, sources } = (await req.json().catch(() => ({}))) as {
+  const { concept, sources, level: lvl, style: sty } = (await req
+    .json()
+    .catch(() => ({}))) as {
     concept?: string;
     sources?: Src[];
+    level?: Level;
+    style?: Style;
   };
   if (!concept) {
     return NextResponse.json({ grounded: false, markdown: "", sources: [] });
   }
+  // Validate the dials (default to working student prose if absent/garbage).
+  const level: Level = lvl && lvl in LEVEL_DIRECTIVE ? lvl : "student";
+  const style: Style = sty && sty in STYLE_DIRECTIVE ? sty : "prose";
 
   const srcs = Array.isArray(sources) ? sources : [];
   const hasSources = srcs.length > 0;
@@ -99,7 +134,7 @@ export async function POST(req: NextRequest) {
       }));
       content.push({
         type: "text",
-        text: `${buildPrompt(true, "")}\n\nCONCEPT: ${concept}`,
+        text: `${buildPrompt(true, level, style)}\n\nCONCEPT: ${concept}`,
       });
 
       const message = await client.messages.create({
@@ -132,7 +167,10 @@ export async function POST(req: NextRequest) {
         model: "claude-opus-4-8",
         max_tokens: 900,
         messages: [
-          { role: "user", content: `${buildPrompt(false, "")}\n\nCONCEPT: ${concept}` },
+          {
+            role: "user",
+            content: `${buildPrompt(false, level, style)}\n\nCONCEPT: ${concept}`,
+          },
         ],
       });
       let fbRaw = "";

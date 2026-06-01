@@ -140,7 +140,10 @@ function thinkingWidget(from: number): Decoration {
       const cue = document.createElement("span");
       cue.className = "ghost-thinking";
       cue.setAttribute("contenteditable", "false");
-      cue.textContent = "thinking…";
+      // A leading <br> drops the cue to its OWN line below the caret while the
+      // widget stays inline (a block widget here breaks caret placement).
+      cue.appendChild(document.createElement("br"));
+      cue.appendChild(document.createTextNode("thinking…"));
       return cue;
     },
     { side: 1, key: "ghost-thinking", ignoreSelection: true }
@@ -157,7 +160,10 @@ function ghostWidget(text: string, from: number): Decoration {
       const ghost = document.createElement("span");
       ghost.className = "ghost-text"; // gradient fill — the assistant's words
       ghost.setAttribute("contenteditable", "false");
-      ghost.textContent = text;
+      // Leading <br> → the suggestion sits on its OWN line below the caret (no
+      // overlap), while the widget stays inline so the cursor isn't broken.
+      ghost.appendChild(document.createElement("br"));
+      ghost.appendChild(document.createTextNode(text));
       const accept = (e: Event) => {
         e.preventDefault();
         acceptGhost(view);
@@ -166,6 +172,12 @@ function ghostWidget(text: string, from: number): Decoration {
       ghost.addEventListener("touchend", accept); // tap-to-keep, unlabelled
       return ghost;
     },
-    { side: 1, key: `ghost-${from}-${text}`, ignoreSelection: true }
+    // Key on the TEXT only, NOT the position: as the user types, `from` remaps
+    // every keystroke, but the suggestion is unchanged — a position-bearing key
+    // would destroy + rebuild this contenteditable=false node right at the caret
+    // each keystroke, which resets the browser selection (caret jumps to start).
+    // A stable key lets ProseMirror reuse the node and just reposition it, so the
+    // cursor stays put. The key still changes when the suggestion itself changes.
+    { side: 1, key: `ghost-${text}`, ignoreSelection: true }
   );
 }

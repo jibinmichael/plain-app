@@ -4,19 +4,17 @@ import { rateLimited } from "@/lib/ratelimit";
 
 export const runtime = "nodejs";
 
-const VERBS = ["find", "do", "avoid", "because"] as const;
-
-const INSTRUCTION = `You mark what matters in a single line of a medical student's notes. Identify the key spans and classify each into exactly one verb:
-- "find" — a finding, sign, symptom, or diagnostic clue
-- "do" — a treatment, action, or thing to perform
-- "avoid" — a danger, contraindication, or thing to watch out for
-- "because" — a mechanism, cause, or reason
+// v3.7 — key-point marking (domain-neutral). Given a chunk of the user's notes,
+// return the few most important phrases worth HIGHLIGHTING, as exact verbatim
+// substrings. The client applies a soft background highlight to each, so the eye
+// lands on what matters. Not medical-specific; no classification.
+const INSTRUCTION = `You highlight what matters in a student's notes. Identify the KEY phrases worth marking — the core takeaways the reader must catch.
 
 Rules:
-- Return ONLY the most important spans (usually 1–3). Do not mark everything.
-- Each span's "text" MUST be an exact, verbatim substring copied from the line.
-- Keep spans tight — the meaningful phrase, not the whole sentence.
-- If nothing in the line is important enough, return an empty list.`;
+- Return ONLY the most important phrases (usually 1–4 across the whole text). Do NOT mark everything.
+- Each "text" MUST be an exact, verbatim substring copied from the notes (match case and punctuation).
+- Keep each phrase TIGHT — the meaningful words, never a whole sentence or paragraph.
+- If nothing is important enough, return an empty list.`;
 
 const SCHEMA = {
   type: "object" as const,
@@ -27,9 +25,8 @@ const SCHEMA = {
         type: "object" as const,
         properties: {
           text: { type: "string" as const },
-          verb: { type: "string" as const, enum: [...VERBS] },
         },
-        required: ["text", "verb"],
+        required: ["text"],
         additionalProperties: false,
       },
     },
@@ -39,15 +36,14 @@ const SCHEMA = {
 };
 
 export async function POST(req: NextRequest) {
-  // Per-IP rate limit (calm: empty span list). This route is dormant (verb tags
-  // were removed in v3.0) but stays guarded as a live Anthropic endpoint.
+  // Per-IP rate limit (calm: empty span list).
   if (rateLimited(req, "mark")) return NextResponse.json({ spans: [] });
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ spans: [] });
   }
   const { text } = (await req.json().catch(() => ({}))) as { text?: string };
-  const line = (text ?? "").trim();
-  if (line.length < 3) return NextResponse.json({ spans: [] });
+  const notes = (text ?? "").trim();
+  if (notes.length < 12) return NextResponse.json({ spans: [] });
 
   const client = new Anthropic();
   try {
@@ -56,10 +52,10 @@ export async function POST(req: NextRequest) {
       max_tokens: 400,
       output_config: { format: { type: "json_schema", schema: SCHEMA } },
       messages: [
-        { role: "user", content: `${INSTRUCTION}\n\nLine:\n"""\n${line}\n"""` },
+        { role: "user", content: `${INSTRUCTION}\n\nNotes:\n"""\n${notes}\n"""` },
       ],
     });
-    let parsed: { spans?: { text: string; verb: string }[] } = {};
+    let parsed: { spans?: { text: string }[] } = {};
     for (const block of message.content) {
       if (block.type === "text") {
         try {
@@ -70,7 +66,7 @@ export async function POST(req: NextRequest) {
       }
     }
     const spans = (parsed.spans ?? []).filter(
-      (s) => s && typeof s.text === "string" && (VERBS as readonly string[]).includes(s.verb)
+      (s) => s && typeof s.text === "string" && s.text.trim().length > 1
     );
     return NextResponse.json({ spans });
   } catch (err) {

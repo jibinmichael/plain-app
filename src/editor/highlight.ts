@@ -28,9 +28,9 @@ export const Highlight = Mark.create({
   },
 
   renderHTML({ HTMLAttributes }) {
-    // v3.0: inline highlight ornament removed — renders as plain text (kept in
-    // schema only so older docs still load). No coloured background.
-    return ["mark", mergeAttributes(HTMLAttributes), 0];
+    // v3.7: key-point highlight — a soft, clipped background (Notion-style) via
+    // the .mark-highlight class, so the reader's eye lands on what matters.
+    return ["mark", mergeAttributes(HTMLAttributes, { class: "mark-highlight" }), 0];
   },
 
   addCommands() {

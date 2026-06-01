@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { IconTrash, IconExternalLink } from "@tabler/icons-react";
+import {
+  IconExternalLink,
+  IconChevronDown,
+  IconCheck,
+} from "@tabler/icons-react";
 import {
   type NoteRecord,
   type NoteBreakdown,
@@ -9,10 +13,25 @@ import {
   groundingSources,
   noteConcepts,
   noteText,
-  setBreakdown,
+  setBreakdownFor,
+  setNoteGen,
 } from "@/lib/store";
+import {
+  type GenPref,
+  type Level,
+  type Style,
+  DEFAULT_GEN,
+  LEVELS,
+  STYLES,
+  OPTION_COLOR,
+  comboKey,
+  getGlobalGen,
+  GEN_PREF_EVENT,
+} from "@/lib/genPref";
 import { buildOrbit } from "@/lib/orbit";
+import type { FlowSpec } from "@/lib/flow";
 import MicroNoteBody from "./MicroNoteBody";
+import FlowChart from "./FlowChart";
 
 type Props = {
   note: NoteRecord | null; // the auto-note being opened (null = closed)
@@ -48,10 +67,17 @@ export default function MicroBreakdown({
   notes,
   onClose,
   onOpen,
-  onDismiss,
 }: Props) {
   const [data, setData] = useState<NoteBreakdown | null>(null);
   const [loading, setLoading] = useState(false);
+  // This note's current depth/style. Per-note override (note.gen) beats the
+  // global default; the control changes it without touching the global default.
+  const [gen, setGen] = useState<GenPref>(DEFAULT_GEN);
+  // In-session cache of generated breakdowns keyed by comboKey(level,style) so
+  // switching is instant (the `note` prop's `breakdowns` can be stale mid-session).
+  const cacheRef = useRef<Record<string, NoteBreakdown>>({});
+  // The depth/style dropdown's open state (BUG2: one clear labeled control).
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const gist =
     note?.gist ||
@@ -61,7 +87,7 @@ export default function MicroBreakdown({
   const connects = note ? buildOrbit(notes, note.id).neighbors : [];
 
   const generate = useCallback(
-    async (concept: string, noteId: string) => {
+    async (concept: string, noteId: string, level: Level, style: Style) => {
       setLoading(true);
       try {
         const qt = tokens(concept);
@@ -81,10 +107,42 @@ export default function MicroBreakdown({
           .map(({ title, markdown }) => ({ title, markdown, tier: "peer" as const }));
 
         const sources = [...noteSources, ...(await groundingSources())];
+
+        // v3.6 Part B: is this concept a process/protocol? If so the note becomes
+        // an editable FLOWCHART (grounded-or-ghost, provisional) instead of prose.
+        try {
+          const fRes = await fetch("/api/flow", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ concept, sources }),
+          });
+          const f = (await fRes.json()) as {
+            process?: boolean;
+            spec?: FlowSpec;
+            grounded?: boolean;
+          };
+          if (f.process && f.spec) {
+            const bd: NoteBreakdown = {
+              grounded: !!f.grounded,
+              markdown: "",
+              sources: [],
+              flow: f.spec,
+              generatedAt: Date.now(),
+            };
+            const key = comboKey(level, style);
+            cacheRef.current[key] = bd;
+            setData(bd);
+            await setBreakdownFor(noteId, key, bd);
+            return; // flowchart, not prose — done
+          }
+        } catch {
+          /* detection failed → fall through to a normal note */
+        }
+
         const res = await fetch("/api/breakdown", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ concept, sources }),
+          body: JSON.stringify({ concept, sources, level, style }),
         });
         const d = (await res.json()) as {
           grounded?: boolean;
@@ -163,8 +221,10 @@ export default function MicroBreakdown({
           webSources,
           generatedAt: Date.now(),
         };
+        const key = comboKey(level, style);
+        cacheRef.current[key] = bd; // instant within the session
         setData(bd);
-        await setBreakdown(noteId, bd);
+        await setBreakdownFor(noteId, key, bd); // persists per combo
       } catch {
         setData({ grounded: false, markdown: "", sources: [], generatedAt: Date.now() });
       } finally {
@@ -174,21 +234,74 @@ export default function MicroBreakdown({
     [notes]
   );
 
-  // On open: use the cached breakdown if present, else generate once.
-  // Migrate legacy cached breakdowns (old {fields} shape) by regenerating.
+  // Show the breakdown for a given (level, style): cached → instant; else
+  // generate it. Grounded-or-ghost + caching unchanged — only the FORM varies.
+  const load = useCallback(
+    async (n: NoteRecord, g: GenPref) => {
+      const key = comboKey(g.level, g.style);
+      const cached = cacheRef.current[key];
+      if (cached && typeof cached.markdown === "string" && cached.markdown) {
+        setData(cached);
+        return;
+      }
+      // Legacy single breakdown (pre-v3.6) → show it instantly on first open so
+      // there's no blank flash; switching combos generates the proper new form.
+      const legacy = n.breakdown;
+      if (
+        legacy &&
+        typeof legacy.markdown === "string" &&
+        legacy.markdown &&
+        Object.keys(cacheRef.current).length === 0
+      ) {
+        cacheRef.current[key] = legacy;
+        setData(legacy);
+        return;
+      }
+      await generate(n.title, n.id, g.level, g.style);
+    },
+    [generate]
+  );
+
+  // On open: seed the session cache from the note, pick its level/style
+  // (per-note override → else global default), and load that combo.
   useEffect(() => {
     if (!note) {
       setData(null);
+      cacheRef.current = {};
       return;
     }
-    const cached = note.breakdown as NoteBreakdown | undefined;
-    if (cached && typeof cached.markdown === "string" && cached.markdown) {
-      setData(cached);
-      return;
-    }
-    void generate(note.title, note.id);
+    cacheRef.current = { ...(note.breakdowns || {}) };
+    const g = note.gen ?? getGlobalGen();
+    setGen(g);
+    setMenuOpen(false);
+    void load(note, g);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note?.id]);
+
+  // User flips the per-note control: persist it as this note's override (beats
+  // global), and show that combo (cached → instant, else generate).
+  const changeGen = useCallback(
+    (g: GenPref) => {
+      if (!note) return;
+      setGen(g);
+      void setNoteGen(note.id, g);
+      void load(note, g);
+    },
+    [note, load]
+  );
+
+  // If the global default changes while a note WITHOUT an override is open,
+  // follow it live.
+  useEffect(() => {
+    const onPref = () => {
+      if (!note || note.gen) return; // an explicit per-note override wins
+      const g = getGlobalGen();
+      setGen(g);
+      void load(note, g);
+    };
+    window.addEventListener(GEN_PREF_EVENT, onPref);
+    return () => window.removeEventListener(GEN_PREF_EVENT, onPref);
+  }, [note, load]);
 
   // A page is not a popup: never dismiss on outside tap. Esc closes (back).
   useEffect(() => {
@@ -208,14 +321,36 @@ export default function MicroBreakdown({
       const next = { ...cur, markdown };
       dataRef.current = next;
       setData(next);
-      await setBreakdown(note.id, next);
+      const key = comboKey(gen.level, gen.style);
+      cacheRef.current[key] = next;
+      await setBreakdownFor(note.id, key, next); // persist the edit to this combo
     },
-    [note]
+    [note, gen.level, gen.style]
+  );
+
+  // Persist flowchart edits (label/drag/connect/delete/re-layout). We do NOT
+  // setData here — that would remount the live React Flow editor and reset it on
+  // every nudge; FlowChart owns its state, we only persist the spec.
+  const editFlow = useCallback(
+    async (flow: FlowSpec) => {
+      const cur = dataRef.current;
+      if (!note || !cur) return;
+      const next = { ...cur, flow };
+      dataRef.current = next;
+      const key = comboKey(gen.level, gen.style);
+      cacheRef.current[key] = next;
+      await setBreakdownFor(note.id, key, next);
+    },
+    [note, gen.level, gen.style]
   );
 
   if (!note) return null;
 
   const hasBody = !!data && !!data.markdown;
+  const isFlow = !!data && !!data.flow; // a process → flowchart, not prose
+  // Current depth/style labels for the dropdown trigger ("Student · Prose").
+  const levelLabel = LEVELS.find((l) => l.key === gen.level)?.label ?? gen.level;
+  const styleLabel = STYLES.find((s) => s.key === gen.style)?.label ?? gen.style;
 
   return (
     <div className="micro-page-layer">
@@ -225,28 +360,97 @@ export default function MicroBreakdown({
             <div className="micro-title">{note.title || "Untitled"}</div>
             {gist && <div className="micro-gist">{gist}</div>}
           </div>
-          <div className="micro-actions">
-            <button
-              className="micro-refresh"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => onDismiss(note.id)}
-              aria-label="Dismiss this note (won't suggest again)"
-              title="Dismiss (won't suggest again)"
-            >
-              <IconTrash aria-hidden="true" />
-            </button>
-          </div>
+          {/* Delete lives only in the sidebar now — removed from the page. */}
         </div>
+
+        {/* BUG2 fix: ONE clear, labeled dropdown reading the current state
+            ("Student · Prose ⌄"). Tapping reveals plain-labelled Depth + Style
+            options; changing one visibly regenerates the note below (cause→effect).
+            Override beats the global default for THIS note. Hidden for a flowchart
+            (a process's form is the chart, not prose depth/style). */}
+        {!isFlow && (
+          <div className="gen-control">
+            <span className="gen-control-label">This note</span>
+            <button
+              className="gen-trigger"
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              title="Change depth & style"
+            >
+              <span className="gen-trigger-text">
+                <span style={{ color: OPTION_COLOR[gen.level] }}>{levelLabel}</span>
+                {" · "}
+                <span style={{ color: OPTION_COLOR[gen.style] }}>{styleLabel}</span>
+              </span>
+              <IconChevronDown className="gen-caret" aria-hidden="true" />
+            </button>
+            {menuOpen && (
+              <>
+                <div
+                  className="gen-menu-scrim"
+                  onClick={() => setMenuOpen(false)}
+                  aria-hidden="true"
+                />
+                <div className="gen-menu" role="menu" aria-label="Depth and style">
+                  <div className="gen-menu-group">
+                    <div className="gen-menu-label">Depth</div>
+                    {LEVELS.map((l) => (
+                      <button
+                        key={l.key}
+                        role="menuitemradio"
+                        aria-checked={gen.level === l.key}
+                        className={`gen-menu-opt${gen.level === l.key ? " on" : ""}`}
+                        onClick={() => changeGen({ ...gen, level: l.key })}
+                      >
+                        <span className="gen-menu-mark" aria-hidden="true">
+                          {gen.level === l.key && <IconCheck />}
+                        </span>
+                        <span style={{ color: OPTION_COLOR[l.key] }}>{l.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="gen-menu-group">
+                    <div className="gen-menu-label">Style</div>
+                    {STYLES.map((s) => (
+                      <button
+                        key={s.key}
+                        role="menuitemradio"
+                        aria-checked={gen.style === s.key}
+                        className={`gen-menu-opt${gen.style === s.key ? " on" : ""}`}
+                        onClick={() => changeGen({ ...gen, style: s.key })}
+                      >
+                        <span className="gen-menu-mark" aria-hidden="true">
+                          {gen.style === s.key && <IconCheck />}
+                        </span>
+                        <span style={{ color: OPTION_COLOR[s.key] }}>{s.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         {loading ? (
           <div className="micro-loading">writing this note…</div>
         ) : (
           <>
-            {hasBody && (
+            {isFlow ? (
+              <>
+                <FlowChart key={data!.generatedAt} spec={data!.flow!} onChange={editFlow} />
+                <div className="micro-foot">
+                  provisional flowchart — edit a label, drag, connect, or re-tidy
+                </div>
+              </>
+            ) : (
+            hasBody && (
               <>
                 <MicroNoteBody
                   key={data!.generatedAt}
                   markdown={data!.markdown}
+                  onOpen={onOpen}
                   // Web-cited content is trustworthy (real sources) → render as
                   // real ink, not the faded provisional ghost. Only a draft with
                   // neither local nor web grounding stays grey.
@@ -288,6 +492,7 @@ export default function MicroBreakdown({
                   </section>
                 )}
               </>
+            )
             )}
 
             {connects.length > 0 && (

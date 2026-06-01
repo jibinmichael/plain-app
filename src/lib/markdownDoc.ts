@@ -23,22 +23,25 @@ function parseInline(text: string): Inline[] {
   const out: Inline[] = [];
   // Tokenize on the inline markers, longest-first so ** beats * and cite wins.
   const re =
-    /(\[\[cite:(\d+):([^\]]+)\]\]|\*\*([^*]+)\*\*|__([^_]+)__|\*([^*]+)\*|_([^_]+)_|`([^`]+)`)/g;
+    /(\[\[cite:(\d+):([^\]]+)\]\]|==([^=]+)==|\*\*([^*]+)\*\*|__([^_]+)__|\*([^*]+)\*|_([^_]+)_|`([^`]+)`)/g;
   let last = 0;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
     if (m.index > last) out.push({ type: "text", text: text.slice(last, m.index) });
     const citeN = m[2];
     const citeUrl = m[3];
-    const bold = m[4] ?? m[5];
-    const italic = m[6] ?? m[7];
-    const code = m[8];
+    const highlight = m[4]; // ==key point== → highlight mark
+    const bold = m[5] ?? m[6];
+    const italic = m[7] ?? m[8];
+    const code = m[9];
     if (citeN != null)
       out.push({
         type: "text",
         text: citeN,
         marks: [{ type: "citation", attrs: { n: Number(citeN), href: citeUrl } }],
       });
+    else if (highlight != null)
+      out.push({ type: "text", text: highlight, marks: [{ type: "highlight" }] });
     else if (bold != null)
       out.push({ type: "text", text: bold, marks: [{ type: "bold" }] });
     else if (italic != null)
@@ -210,7 +213,8 @@ function inlineToMd(nodes: JSONContent[] | undefined): string {
         // A citation serializes from its attrs (the visible text is just N).
         if (mark.type === "citation")
           return `[[cite:${mark.attrs?.n ?? t}:${mark.attrs?.href ?? ""}]]`;
-        if (mark.type === "bold") t = `**${t}**`;
+        if (mark.type === "highlight") t = `==${t}==`;
+        else if (mark.type === "bold") t = `**${t}**`;
         else if (mark.type === "italic") t = `*${t}*`;
         else if (mark.type === "code") t = `\`${t}\``;
       }

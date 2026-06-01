@@ -16,25 +16,37 @@ import { useEffect, useRef } from "react";
 import type { JSONContent } from "@tiptap/core";
 import { mdToDoc, docToMd } from "@/lib/markdownDoc";
 import { Citation } from "@/editor/citation";
+import { Highlight } from "@/editor/highlight";
+import { Reference } from "@/editor/reference";
+import { AutoLink } from "@/editor/autoLink";
 
 /**
  * The editable body of a generated atomic note (v3.4 Part 3). Renders the note's
  * markdown as live TipTap content — checkboxes are checkable, tables editable,
  * lists/prose/images real nodes. On change it serializes back to markdown via
- * `onChange` so edits persist. A separate, lighter editor than the main canvas
- * (no ghost/concept/title machinery — this is a generated note's content).
+ * `onChange` so edits persist.
+ *
+ * v3.7: AI-generated notes now join the linked web like user-written ones — the
+ * Reference mark + AutoLink auto-link any text matching an existing note's title
+ * (the same shared title index the editor maintains). Links are existing-note
+ * only (no new notes are spawned here → no cascade), re-derived on each load,
+ * and tappable to open the linked note.
  */
 export default function MicroNoteBody({
   markdown,
   ghost,
   onChange,
+  onOpen,
 }: {
   markdown: string;
   ghost?: boolean; // ungrounded → render provisional/grey
   onChange: (md: string) => void;
+  onOpen?: (id: string) => void; // open a linked note
 }) {
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  const onOpenRef = useRef(onOpen);
+  onOpenRef.current = onOpen;
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -47,6 +59,9 @@ export default function MicroNoteBody({
       Italic,
       Code,
       Citation,
+      Highlight, // ==key point== → clipped background highlight
+      Reference, // schema mark for note links (rendered .mark-reference)
+      AutoLink, // auto-link spans matching existing note titles
       HorizontalRule,
       BulletList,
       OrderedList,
@@ -64,6 +79,16 @@ export default function MicroNoteBody({
       attributes: {
         class: `micro-note-body${ghost ? " ghost" : ""}`,
         spellcheck: "false",
+      },
+      // Tap an auto-link to open that note; normal clicks just place the caret.
+      handleClick: (_view, _pos, event) => {
+        const el = (event.target as HTMLElement | null)?.closest?.("[data-note-id]");
+        const id = el?.getAttribute("data-note-id");
+        if (id && onOpenRef.current) {
+          onOpenRef.current(id);
+          return true;
+        }
+        return false;
       },
     },
     onUpdate: ({ editor }) => {

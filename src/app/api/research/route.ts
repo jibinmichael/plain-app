@@ -29,9 +29,14 @@ type Research = { grounded: boolean; markdown: string; sources: WebSource[] };
 const cache = new Map<string, Research>();
 
 const PROMPT = (concept: string) =>
-  `Research the concept "${concept}" and write 2–4 sentences of accurate, factual note content explaining it and why it matters. ` +
-  `Back the key factual claims with reputable, popular sources — prefer .gov / .org, major medical or academic sites, and established references. ` +
-  `Cite as you write. Plain prose only: no headings, no lists, no preamble like "Here is".`;
+  `Research the concept "${concept}" and write 2–4 sentences of accurate, factual note content explaining it and why it matters.\n\n` +
+  `Cite as you write, and STRONGLY prefer authoritative, popular sources in roughly this order:\n` +
+  `1. Government / official health bodies (.gov, .int): NIH, MedlinePlus, PubMed/NCBI, CDC, WHO, NHS, FDA.\n` +
+  `2. Major academic / medical references (.edu, established journals): Mayo Clinic, Cleveland Clinic, peer-reviewed journals, university sites.\n` +
+  `3. Well-established encyclopedic references: Wikipedia, Britannica.\n\n` +
+  `AVOID low-quality sources: SEO/marketing blogs, content aggregators, patent/commercial databases, and paywalled pages with no usable abstract. If a reputable source isn't available for a claim, leave that claim uncited rather than citing a weak one.\n\n` +
+  `Also HIGHLIGHT the key points: wrap the 1–2 most important phrases in ==double equals== (sparingly — only the core takeaway). Put the highlight on the phrase itself, not on the citation marker.\n\n` +
+  `Plain prose only: no headings, no lists, no preamble like "Here is".`;
 
 function domainOf(url: string): string {
   try {
