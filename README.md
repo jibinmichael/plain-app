@@ -1,36 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# plain
 
-## Getting Started
+An iA-Writer-style grounded markdown note editor for medical students. You just
+write; plain quietly grounds factual continuations in your sources, spins key
+concepts into linked micro-notes, and organises everything into a derived tree.
 
-First, run the development server:
+## Run locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+echo "ANTHROPIC_API_KEY=sk-ant-..." > .env.local   # server-side only
+npm run dev          # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Without a key the editor, notes, sidebar, command field, persistence, and
+offline all work — only the AI features (grounding, concepts) stay silent.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Var | Where | Required | Purpose |
+|-----|-------|----------|---------|
+| `ANTHROPIC_API_KEY` | server only | for AI features | Grounding (`/api/ground`), concepts (`/api/concepts`), verb-mark (`/api/mark`). Read only in Node API routes; never shipped to the client. |
 
-## Learn More
+No `NEXT_PUBLIC_*` keys exist — nothing secret reaches the browser bundle.
 
-To learn more about Next.js, take a look at the following resources:
+## Architecture (one deployable unit)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Next.js 16 (App Router)** app — the editor + three server API routes
+  (`runtime = "nodejs"`) that call the Anthropic API. Everything is one app.
+- **Persistence** is client-side **IndexedDB** (`idb-keyval`) — notes, the
+  concept graph, tree state, dismissed phrases. No database, no server state.
+- **Sources / truth layer**: plain `.md` files in [`/sources`](./sources),
+  read server-side by `/api/ground`. Each may declare an **authority tier**
+  via frontmatter (`tier: guideline|textbook|lecture|peer`) or a
+  `name.<tier>.md` suffix; grounding weights higher tiers first and surfaces
+  conflicts instead of silently choosing.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## PWA / offline
 
-## Deploy on Vercel
+- `manifest.webmanifest` + icons + an `apple-touch-icon` → installable.
+- A minimal service worker (`public/sw.js`, registered in **production only**)
+  caches the app shell so it loads offline. Writing and local navigation work
+  fully offline (IndexedDB); AI features pause calmly and resume when back.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deploy
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Web app → Vercel** (or any Next.js host):
+
+```bash
+npm run build    # must be clean
+# set ANTHROPIC_API_KEY in the host's env (Production + Preview)
+```
+
+That's the whole deploy — a single Next.js unit. There is **no separate
+conversion / attachments service** in this build (attachments were never
+implemented), so nothing else needs hosting. If attachments (e.g. a MarkItDown
+conversion service) are added later, they'd deploy as a separate container with
+their own size/type/rate limits; that work is not present today.
+
+## Not yet built (known gaps)
+
+- **Attachments / file conversion** — no `/api/attach`, no conversion service.
+- **Per-source tier override UI** — tiers are set via the source files
+  themselves; there is no in-app source manager yet.

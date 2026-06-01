@@ -1,26 +1,2162 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ───────────────────────────────────────────────────────────
+   plain — design tokens (v0.3)
+   Flipped by `data-theme` on <html>; the no-flash script sets it pre-paint.
+   Theme flip crossfades the canvas (~200ms).
+   ─────────────────────────────────────────────────────────── */
+
+:root,
+[data-theme="light"] {
+  /* Sundial-inspired light — ink is the ONE hero accent; the canvas stays
+     calm and mostly monochrome. Teal/coral live ONLY on verb tags. */
+  --canvas: #ffffff; /* soft lavender-white */
+  --text: #1a1a1a;
+  --secondary: #6f6f6f;
+  --faded: #bcbcbc;
+  --accent: #1a1a1a; /* near-black ink */
+  --ghost: #bcbcbc;
+  --fetched: #8a8a8a;
+  --link: #9b9b9b; /* quiet grey - link text */
+  --link-line: #cfcfcf; /* quieter grey - link underline */
+  --border: #efefef;
+  /* one step above the canvas */
+  --surface: #fafafa;
+  --hairline: #efefef;
+  --edge: #ececec; /* outer edges, a touch darker */
+  --backdrop: rgba(26, 26, 26, 0.28);
+  --press: rgba(26, 26, 26, 0.06);
+  /* heading levels */
+  --h1: #1a1a1a;
+  --h2: #1a1a1a;
+  --h3: #6f6f6f;
+  --active-row: #f4f4f4;
+  /* sidebar — its own quiet zone */
+  --sidebar: #ffffff;
+  --orbit-bg: #fafafa; /* dock / peek surface */
+  --indent: rgba(26, 26, 26, 0.07);
+  --cluster: #6f6f6f; /* tree cluster label - quiet grey */
+
+  /* ═══════════════════════════════════════════════════════════
+     DESIGN SYSTEM (v3.1) — the single source of truth.
+     Every size / spacing / colour on every surface routes through
+     these. No hardcoded values elsewhere. Applied to the EDITOR
+     first; other surfaces migrate to it one slice at a time.
+     ═══════════════════════════════════════════════════════════ */
+
+  /* Spacing — 8px base rhythm (every gap/margin/padding is a multiple) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Type scale (mono unchanged; size + weight do the work) */
+  --text-title: 16px; /* note title / h1, weight 600 */
+  --text-h2: 13px; /* section heading, weight 600 (weight, not size, separates) */
+  --text-body: 13px; /* body, weight 400 */
+  --text-small: 12px; /* tables, captions, meta */
+  --text-label: 11px; /* uppercase field labels, weight 700, +0.5px tracking */
+  --leading: 1.62; /* line-height EVERYWHERE — the calm-maker (from iA) */
+
+  /* Colour (white / ink — canonical names for the system) */
+  --ink: #1a1a1a;
+  /* --secondary / --faded already defined above and match the system */
+  --paper: #ffffff;
+  --active: #f4f4f4;
+  /* Note: the system hairline is #ececec; exposed as --edge above (kept
+     separate from the legacy --hairline #efefef until other surfaces migrate). */
+
+  /* Layout */
+  --measure: 680px; /* max reading-column width, centered */
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+[data-theme="dark"] {
+  --canvas: #1c1c1e;
+  --text: #c7c7cb;
+  --secondary: #7e7e83;
+  --faded: #46464b;
+  --accent: #5dcaa5;
+  --ghost: #5e5e63;
+  --fetched: #6e6e73;
+  --link: #7fb0de;
+  --border: rgba(255, 255, 255, 0.08);
+  --surface: #27272b;
+  --hairline: rgba(255, 255, 255, 0.14);
+  --backdrop: rgba(0, 0, 0, 0.45);
+  --press: rgba(255, 255, 255, 0.08);
+  --h1: #5dcaa5;
+  --h2: #7fa8c9;
+  --h3: #54545a;
+  --active-row: rgba(93, 202, 165, 0.12);
+  --sidebar: #18181a;
+  --orbit-bg: #202024;
+  --indent: rgba(255, 255, 255, 0.07);
+  --cluster: #7c7c84;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  :root:not([data-theme]) {
+    --canvas: #1c1c1e;
+    --text: #c7c7cb;
+    --secondary: #7e7e83;
+    --faded: #46464b;
+    --accent: #5dcaa5;
+    --ghost: #5e5e63;
+    --fetched: #6e6e73;
+    --link: #7fb0de;
+    --border: rgba(255, 255, 255, 0.08);
+    --surface: #27272b;
+    --hairline: rgba(255, 255, 255, 0.14);
+    --backdrop: rgba(0, 0, 0, 0.45);
+    --press: rgba(255, 255, 255, 0.08);
+    --h1: #5dcaa5;
+    --h2: #7fa8c9;
+    --h3: #54545a;
+    --active-row: rgba(93, 202, 165, 0.12);
+    --sidebar: #18181a;
+    --orbit-bg: #202024;
+    --indent: rgba(255, 255, 255, 0.07);
+    --cluster: #7c7c84;
   }
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  background: var(--canvas);
+  color: var(--text);
+  font-family: var(--font-mono), ui-monospace, monospace;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+/* ── App shell ─────────────────────────────────────────────── */
+.app {
+  min-height: 100svh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.topbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 10px 14px;
+}
+.editor-scroll {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.editor-column {
+  position: relative;
+  width: 100%;
+  max-width: var(--measure); /* 680px reading column, centered */
+  /* iA-style responsive side padding: snug on phone → generous on desktop */
+  padding: var(--space-6) clamp(var(--space-4), 6vw, var(--space-8));
+  padding-bottom: 40vh;
+}
+
+/* ── One grid: circular targets + capsule surfaces ─────────── */
+/* Circular icon button. Transparent; faint circular fill only on press. */
+.cir {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  padding: 0;
+  background: transparent;
+  color: var(--secondary);
+  cursor: pointer;
+  transition: color 150ms ease, transform 120ms ease, background-color 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+  flex: 0 0 auto;
+}
+.cir svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 1.8;
+}
+.cir:active {
+  transform: scale(0.96);
+  background: var(--press);
+  color: var(--text);
+}
+@media (hover: hover) {
+  .cir:hover {
+    color: var(--text);
+  }
+}
+.cir.accent {
+  color: var(--accent);
+}
+
+/* Capsule surface: one step above canvas, hairline border, no shadow. */
+.capsule {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  background: var(--surface);
+  border: 0.5px solid var(--hairline);
+  border-radius: 999px;
+}
+.capsule .hair {
+  width: 0.5px;
+  align-self: stretch;
+  margin: 3px 2px;
+  background: var(--hairline);
+  flex: 0 0 auto;
+}
+
+/* ── Bottom dock palette (Freeform-style) ──────────────────── */
+.dock {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 16px);
+  transform: translateX(-50%);
+  z-index: 40;
+}
+.dock.top {
+  bottom: auto;
+  top: calc(env(safe-area-inset-top) + 16px);
+}
+
+/* ── Theme glyph (corner, no background ever) ──────────────── */
+.glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--secondary);
+  cursor: pointer;
+  transition: color 150ms ease, transform 120ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.glyph svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 1.8;
+}
+.glyph:active {
+  transform: scale(0.96);
+}
+@media (hover: hover) {
+  .glyph:hover {
+    color: var(--text);
+  }
+}
+
+/* ── Selection bubble (BubbleMenu contents) ────────────────── */
+.bubble {
+  padding: 6px;
+}
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  margin: 0 2px;
+  cursor: pointer;
+  flex: 0 0 auto;
+  box-shadow: 0 0 0 0 transparent;
+  transition: box-shadow 120ms ease, transform 120ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.dot:active {
+  transform: scale(0.92);
+}
+.dot[data-selected="true"] {
+  box-shadow: 0 0 0 1.5px var(--text);
+}
+
+/* link picker, morphed into the bubble */
+.picker {
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  max-width: 280px;
+  padding: 2px;
+}
+.picker-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font: inherit;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  padding: 6px 8px;
+}
+.picker-opt {
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--secondary);
+  font: inherit;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 13px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  min-height: 34px;
+}
+.picker-opt .opt-new {
+  color: var(--accent);
+}
+@media (hover: hover) {
+  .picker-opt:hover {
+    color: var(--text);
+  }
+}
+
+/* ── Editor (ProseMirror) ──────────────────────────────────── */
+.ProseMirror {
+  outline: none;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: var(--text-body); /* 13px — compact */
+  line-height: var(--leading); /* 1.62 — the calm-maker, applied everywhere */
+  color: var(--ink);
+  caret-color: var(--ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+/* Block rhythm: 8px between every block. Headings add a 16px lead-in below. */
+.ProseMirror p {
+  margin: 0 0 var(--space-2);
+}
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--faded);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Title-first display (v1.5): heading markers hidden, text styled as title /
+   subheading with NO visible symbol. Emphasis markers stay dimmed (focus-reveal). */
+.md-hide {
+  display: none; /* the `#`/`##` + trailing space — never shown */
+}
+/* Heading lines are sized at the BLOCK level so the whole line (caret, strut,
+   typed text, everything) is the heading size — no body substrate under it.
+   Title = 16px; section heading = 13px but bold, separated by WEIGHT not size.
+   line-height inherits --leading (no per-element override). */
+.ProseMirror p.head1 {
+  font-size: var(--text-title); /* 16px note title */
+  font-weight: 600;
+  margin-bottom: var(--space-4); /* title bottom margin */
+}
+.ProseMirror p.head2 {
+  font-size: var(--text-h2); /* 13px — weight, not size, makes it a heading */
+  font-weight: 600;
+  margin-top: var(--space-4); /* breathing room above a section heading */
+}
+/* The inline run only carries weight/colour — font-size:1em so it inherits the
+   block size and never double-scales it. Same weight for all heading levels. */
+.tok-title,
+.tok-subheading {
+  font-size: 1em;
+  font-weight: 600;
+  color: var(--ink);
+}
+.md-mark {
+  opacity: 0.5;
+  transition: opacity 150ms ease, color 150ms ease;
+}
+.md-mark.is-active {
+  opacity: 1;
+}
+.md-mark.emph {
+  color: var(--secondary);
+}
+.tok-emphasis {
+  color: var(--secondary);
+}
+
+/* Per-line placeholders — a quiet prompt on every empty line, never a void.
+   The float+height:0 keeps the caret at column 0, but an empty paragraph then
+   contributes no height and the NEXT line's floated placeholder rides up onto
+   it (title + body overlapping). min-height holds each empty line open so the
+   placeholders stay on their own rows. */
+.ProseMirror p.ph::before {
+  pointer-events: none;
+  height: 0;
+  float: left;
+  white-space: nowrap;
+}
+.ProseMirror p.ph-title {
+  min-height: calc(var(--text-title) * var(--leading));
+}
+.ProseMirror p.ph-sub,
+.ProseMirror p.ph-body {
+  min-height: calc(var(--text-body) * var(--leading));
+}
+.ProseMirror p.ph-title::before {
+  content: "Untitled";
+  font-size: var(--text-title);
+  font-weight: 600;
+  color: var(--faded);
+}
+.ProseMirror p.ph-sub::before {
+  content: "Subheading";
+  font-size: var(--text-h2);
+  font-weight: 600;
+  color: var(--faded);
+}
+.ProseMirror p.ph-body::before {
+  content: "Start writing…";
+  color: var(--faded);
+}
+
+/* Origin marks */
+.origin-ai {
+  color: var(--fetched);
+  text-decoration: underline dotted var(--fetched);
+  text-underline-offset: 3px;
+}
+
+/* Highlight — muted tones, colour carried on the mark. */
+.mark-highlight {
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* Reference (linked term) — a proper link: distinguishable by colour AND
+   underline. "this is its own note, tap to open." */
+.mark-reference {
+  color: var(--link);
+  text-decoration: underline;
+  text-decoration-color: var(--link-line);
+  text-underline-offset: 3px;
+  cursor: pointer;
+  animation: ref-settle 320ms ease both;
+}
+@keyframes ref-settle {
+  from {
+    text-decoration-color: transparent;
+  }
+  to {
+    text-decoration-color: var(--link-line);
+  }
+}
+
+/* The shimmer: a soft accent-tinted light sweep across the phrase's GLYPHS
+   themselves — it animates the text colour, never a background fill. */
+.shimmer {
+  background-image: linear-gradient(
+    100deg,
+    var(--text) 0%,
+    var(--text) 38%,
+    var(--faded) 50%,
+    var(--text) 62%,
+    var(--text) 100%
+  );
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: shimmer-sweep 1.5s ease both;
+}
+@keyframes shimmer-sweep {
+  from {
+    background-position: 220% 0;
+  }
+  to {
+    background-position: -60% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shimmer {
+    animation: none;
+    background-image: none;
+    -webkit-text-fill-color: currentColor;
+    color: inherit;
+  }
+  .mark-reference {
+    animation: ref-fade 320ms ease both;
+  }
+  @keyframes ref-fade {
+    from {
+      opacity: 0.4;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+/* ── Ghost suggestion — just grey text, no chrome (v3.4) ─────── */
+/* Faint grey = provisional, not yours yet. It simply sits there; the user types
+   past it to dismiss, or Tab/tap silently accepts. No keep/ignore affordance. */
+.ghost-text {
+  color: color-mix(in srgb, var(--accent) 28%, var(--faded));
+  cursor: pointer;
+}
+
+/* ── Inset ask block (lives in the page, not a chatbox) ────── */
+.ask-block {
+  position: absolute;
+  left: clamp(20px, 5vw, 32px);
+  right: clamp(20px, 5vw, 32px);
+  z-index: 30;
+  padding: 10px 0 10px 14px;
+  border-left: 1.5px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--accent) 6%, var(--canvas));
+  border-radius: 0 8px 8px 0;
+}
+.ask-answer {
+  color: var(--secondary);
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.ask-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  gap: 8px;
+}
+.ask-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--faded);
+  min-width: 0;
+}
+.ask-chip svg {
+  width: 13px;
+  height: 13px;
+  color: var(--accent);
+  flex: 0 0 auto;
+}
+.ask-chip .fname {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ask-actions {
+  display: inline-flex;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+/* ── Command field (find · navigate · create — one field, no modes) ── */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: var(--backdrop);
+}
+.cmd {
+  position: fixed;
+  z-index: 61;
+  top: calc(env(safe-area-inset-top) + 12vh);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(520px, calc(100vw - 28px));
+  background: var(--paper);
+  border: 0.5px solid var(--hairline);
+  border-radius: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.cmd-head {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 0.5px solid var(--hairline);
+}
+.cmd-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--ink);
+  font: inherit;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: var(--text-body);
+  line-height: var(--leading);
+  padding: var(--space-3) var(--space-4);
+}
+.cmd-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+  padding: 0 var(--space-3);
+  border: none;
+  background: transparent;
+  color: var(--faded);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cmd-close svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 1.8;
+}
+.cmd-close:active {
+  transform: scale(0.94);
+}
+@media (hover: hover) {
+  .cmd-close:hover {
+    color: var(--ink);
+  }
+}
+.cmd-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  max-height: min(50vh, 360px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.cmd-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 32px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--space-2);
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-size: var(--text-body);
+  -webkit-tap-highlight-color: transparent;
+}
+.cmd-row[data-active="true"] {
+  background: var(--active);
+}
+
+/* Create row — pinned as a sticky footer with extra breathing room. */
+.cmd-footer {
+  position: sticky;
+  bottom: 0;
+  padding: var(--space-1);
+  border-top: 0.5px solid var(--hairline);
+  background: var(--paper);
+}
+.cmd-create {
+  min-height: auto;
+  padding: var(--space-3);
+}
+.cmd-ic {
+  width: 14px;
+  height: 14px;
+  stroke-width: 1.8;
+  color: var(--secondary);
+  flex: 0 0 auto;
+}
+.cmd-ic.accent {
+  color: var(--accent);
+}
+/* Logical icon tints: a real note takes the ink accent; a mention takes the
+   grey link colour — the same meaning those things carry in the canvas. */
+.cmd-ic.note {
+  color: var(--accent);
+}
+.cmd-ic.mention {
+  color: var(--link);
+}
+.cmd-label {
+  flex: 1;
+  font-size: var(--text-body);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cmd-strong {
+  color: var(--accent);
+}
+.cmd-meta {
+  font-size: var(--text-small);
+  color: var(--faded);
+  flex: 0 0 auto;
+}
+
+/* ── Ask, folded into the command field ────────────────────────────── */
+/* The "Ask your notes" row — ink sprite + ↵ hint. */
+.cmd-ask .sprite {
+  width: 8px;
+  height: 8px;
+}
+.cmd-kbd {
+  margin-left: auto;
+  color: var(--faded);
+  font-size: var(--text-small);
+}
+
+/* The answer: plain text on a faint neutral grey background — NO blockquote. */
+.cmd-answer-wrap {
+  padding: var(--space-2);
+}
+.cmd-answer {
+  background: var(--active); /* faint neutral grey, no purple */
+  border-radius: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  color: var(--ink);
+  font-size: var(--text-body);
+  line-height: var(--leading);
+}
+.cmd-answer-empty {
+  color: var(--secondary);
+}
+.cmd-answer .sprite {
+  width: 8px;
+  height: 8px;
+  margin-right: var(--space-2);
+}
+.cmd-from {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) var(--space-1) var(--space-1);
+  font-size: var(--text-small);
+  color: var(--faded);
+}
+.cmd-from .sprite {
+  width: 7px;
+  height: 7px;
+}
+.cmd-drawn {
+  margin-top: var(--space-2);
+}
+.cmd-drawn-label {
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--faded);
+}
+.cmd-drawn-row[disabled] {
+  cursor: default;
+  opacity: 0.7;
+}
+
+@media (pointer: coarse) {
+  .cmd-input {
+    font-size: 16px;
+  }
+  .cmd-row {
+    min-height: 44px; /* ≥44px tap target on touch */
+  }
+}
+
+/* The single low-contrast silence hint. */
+.hint {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 64px);
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: var(--faded);
+  pointer-events: none;
+  user-select: none;
+  opacity: 0.6;
+  white-space: nowrap;
+}
+
+/* ───────────────────────────────────────────────────────────
+   v0.4 — intelligence layer
+   ─────────────────────────────────────────────────────────── */
+
+/* Verb-tag colours — the ONLY place teal and coral appear (meaning, never
+   decoration). find=teal · do=ink · avoid=coral · because=slate. */
+:root,
+[data-theme="light"] {
+  --v-find: #6f9488;
+  --v-do: #6e87a6;
+  --v-avoid: #b58a82;
+  --v-because: #8a93a6;
+}
+[data-theme="dark"] {
+  --v-find: #7fb0de;
+  --v-do: #5dcaa5;
+  --v-avoid: #d58ba8;
+  --v-because: #c8a24a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --v-find: #7fb0de;
+    --v-do: #5dcaa5;
+    --v-avoid: #d58ba8;
+    --v-because: #c8a24a;
+  }
+}
+
+/* v0.5: verb-tag highlights are quieted (kept in schema, rendered inert) so
+   the only AI signal on the canvas is shimmer → settled link underline. */
+.verb-mark {
+  background: transparent;
+}
+
+/* The one AI sprite — a small square. Pulses while thinking. Never on a button. */
+.sprite {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 1px;
+  background: var(--accent);
+  vertical-align: middle;
+  flex: 0 0 auto;
+}
+.sprite.thinking {
+  animation: sprite-breathe 1.4s ease-in-out infinite;
+}
+@keyframes sprite-breathe {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.ask-thinking {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Ambient AI line (grounded suggestion) ─────────────────── */
+.ambient {
+  white-space: pre-wrap;
+}
+.ambient-text {
+  color: var(--ghost);
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 0 0.15em;
+  background: radial-gradient(
+    130% 150% at 0% 50%,
+    color-mix(in srgb, var(--accent) 20%, transparent),
+    transparent 70%
+  );
+  animation: ambient-in 250ms ease both;
+}
+.ambient-sprite {
+  margin-left: 7px;
+  cursor: pointer;
+}
+@keyframes ambient-in {
+  from {
+    opacity: 0;
+    filter: blur(1px);
+  }
+  to {
+    opacity: 1;
+    filter: none;
+  }
+}
+
+/* ── Flower prefix (the only per-line entry point) ─────────── */
+.ProseMirror p {
+  position: relative;
+}
+.flower {
+  position: absolute;
+  left: -1.5em;
+  top: 0.18em;
+  display: inline-flex;
+  align-items: flex-start;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.flower-glyph {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  color: var(--faded);
+  opacity: 0.16;
+  display: inline-flex;
+  transition: opacity 150ms ease, color 150ms ease, transform 120ms ease;
+}
+.flower-glyph svg {
+  width: 14px;
+  height: 14px;
+}
+.ProseMirror p:hover .flower-glyph,
+.flower.open .flower-glyph {
+  opacity: 1;
+  color: var(--accent);
+}
+.flower-glyph:active {
+  transform: scale(0.96);
+}
+.flower-fan {
+  display: none;
+  align-items: center;
+  gap: 2px;
+  margin-left: 4px;
+}
+.flower.open .flower-fan {
+  display: inline-flex;
+}
+.flower-act {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--secondary);
+  cursor: pointer;
+  transition: color 150ms ease, transform 120ms ease;
+}
+.flower-act svg {
+  width: 14px;
+  height: 14px;
+}
+.flower-act:active {
+  transform: scale(0.96);
+}
+@media (hover: hover) {
+  .flower-act:hover {
+    color: var(--text);
+  }
+}
+
+/* ── Top-right cluster: three bare glyphs ──────────────────── */
+.topbar-cluster {
+  position: fixed;
+  z-index: 40;
+  top: calc(env(safe-area-inset-top) + 10px);
+  right: calc(env(safe-area-inset-right) + 12px);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Drawer search field */
+.drawer-search {
+  margin: 0 12px 6px;
+  background: transparent;
+  border: none;
+  border-bottom: 0.5px solid var(--hairline);
+  outline: none;
+  color: var(--text);
+  font: inherit;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 13px;
+  padding: 6px 2px;
+}
+
+/* Touch: 16px to prevent iOS focus-zoom; flowers tappable without hover. */
+@media (pointer: coarse) {
+  .ProseMirror,
+  .drawer-search {
+    font-size: 16px;
+  }
+  .flower-glyph {
+    opacity: 0.32;
+  }
+}
+
+/* ───────────────────────────────────────────────────────────
+   v0.8 — left sidebar note tree (derived, never authored)
+   ─────────────────────────────────────────────────────────── */
+
+/* Docked: shift the canvas so the writing column is never crushed. */
+.has-sidebar .editor-scroll {
+  padding-left: 216px;
+}
+
+/* Three fixed zones in a full-height flex column. `min-height:0` lets the tree
+   (the ONLY overflow:auto child) actually scroll, so a long note list can never
+   push into the pinned header or orbit dock. */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--sidebar);
+  color: var(--text);
+  transition: background-color 200ms ease, color 200ms ease;
+}
+.sidebar.docked {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 216px;
+  z-index: 38;
+  border-right: 0.5px solid var(--hairline);
+  padding: calc(env(safe-area-inset-top) + 8px) 0 env(safe-area-inset-bottom)
+    calc(env(safe-area-inset-left) + 8px);
+}
+.sidebar.overlay {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: min(300px, 86vw);
+  z-index: 62;
+  border-right: 0.5px solid var(--hairline);
+  padding: calc(env(safe-area-inset-top) + 8px) 0 env(safe-area-inset-bottom)
+    calc(env(safe-area-inset-left) + 8px);
+}
+
+/* Zone 1: header — never scrolls. */
+.side-head {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px 6px 6px;
+}
+.side-mark {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--secondary);
+  letter-spacing: 0.02em;
+}
+/* Zone 2: tree — the only scrolling region. */
+.side-tree {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 6px 8px 14px 6px;
+}
+
+/* Zone 3: connected orbit dock — pinned, its own slightly-darker surface. */
+.orbit-dock {
+  flex-shrink: 0;
+  border-top: 0.5px solid var(--hairline);
+  padding: 8px 8px 10px;
+  margin-right: 8px; /* sit inside the sidebar's right edge, not under it */
+}
+.orbit-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px 2px;
+}
+.orbit-title {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--faded);
+}
+/* Match the rest of the small icon buttons (.row-act): 22px box, 13px glyph,
+   right-aligned to the row edge so it lines up with the tree's hover icons. */
+.orbit-expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin: -4px -4px -4px 0; /* don't inflate the header height */
+  border: none;
+  background: transparent;
+  color: var(--faded);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.orbit-expand svg {
+  width: 13px;
+  height: 13px;
+  stroke-width: 1.8;
+}
+.orbit-expand:active {
+  transform: scale(0.94);
+}
+@media (hover: hover) {
+  .orbit-expand:hover {
+    color: var(--text);
+  }
+}
+
+/* Radial field: centre + neighbours absolutely placed by the component. */
+.orbit-field {
+  position: relative;
+  margin: 0 auto;
+}
+.orbit-node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 64px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.orbit-node.center {
+  cursor: default;
+}
+.orbit-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.orbit-dot.center {
+  width: 15px;
+  height: 15px;
+  background: var(--accent); /* open note — ink, filled */
+}
+.orbit-dot.written {
+  background: var(--surface);
+  border: 1.5px solid var(--link); /* neighbour — slate outline, white fill */
+}
+.orbit-dot.micro {
+  background: var(--surface);
+  border: 1.5px dashed var(--link); /* concept neighbour — dashed to read as a thread */
+}
+.orbit-label {
+  max-width: 64px;
+  font-size: 10px;
+  line-height: 1.2;
+  color: var(--secondary);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.orbit-label.center {
+  color: var(--accent);
+  font-weight: 600;
+}
+.orbit-node.neighbor:active .orbit-dot {
+  transform: scale(0.92);
+}
+@media (hover: hover) {
+  .orbit-node.neighbor:hover .orbit-label {
+    color: var(--text);
+  }
+}
+.orbit-more {
+  position: absolute;
+  right: 2px;
+  bottom: 0;
+  font-size: 10px;
+  color: var(--faded);
+}
+.orbit-hint {
+  text-align: center;
+  font-size: 10px;
+  color: var(--faded);
+  margin-top: 2px;
+}
+
+/* Expand: a larger centered overlay of the same local orbit. */
+.orbit-overlay-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 64;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.orbit-overlay {
+  position: relative;
+  z-index: 65;
+  width: min(94vw, 1100px);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 0.5px solid var(--hairline);
+  border-radius: 16px;
+  padding: 12px 14px 14px;
+}
+
+@media (pointer: coarse) {
+  .orbit-dot.center {
+    width: 18px;
+    height: 18px;
+  }
+  .orbit-dot {
+    width: 14px;
+    height: 14px;
+  }
+  .orbit-node {
+    width: 70px;
+  }
+}
+
+/* One row grid: [fixed chevron column] · [title]. Every row — with children
+   or without — reserves the chevron column, so all titles align to one edge. */
+.tree-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px; /* uniform rhythm for clusters + notes */
+  margin: 1px 0; /* even vertical gaps */
+  padding: 0 8px;
+  border-radius: 7px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.tree-row.active {
+  background: var(--active-row);
+}
+@media (hover: hover) {
+  .tree-row:hover {
+    background: var(--press);
+  }
+}
+.twisty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px; /* fixed chevron column — empty spacer when no children */
+  height: 13px;
+  color: var(--faded);
+  flex: 0 0 13px;
+}
+.twisty svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 1.8;
+}
+
+/* 1) Inferred cluster — faded, with the AI square sprite. */
+.cluster-row .sprite {
+  width: 7px;
+  height: 7px;
+}
+.cluster-label {
+  font-size: 12px;
+  color: var(--cluster);
+  opacity: 0.9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cluster-rename {
+  font: inherit;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 12px;
+  background: transparent;
+  border: none;
+  border-bottom: 0.5px solid var(--accent);
+  outline: none;
+  color: var(--text);
+  width: 100%;
+}
+
+/* nested groups carry a faint left hairline, centered under the parent row's
+   chevron for perfect symmetry: row padding-left 8px + half the 13px twisty
+   = 14.5px; a 1px border at margin-left 14px sits centered on 14.5px. */
+.note-group {
+  margin-left: 14px;
+  border-left: 1px solid var(--indent);
+}
+
+/* 2) Written note — just the title, no glyph. Full contrast. */
+.note-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 3) Micro-note — dotted-underline link style, smaller, shorter row. Its
+   leading spacer keeps the title in the same column as the notes above. */
+.micro-row {
+  height: 26px;
+}
+.micro-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 11.5px;
+  color: var(--link);
+  text-decoration: underline dotted;
+  text-decoration-color: var(--link-line);
+  text-underline-offset: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Quiet per-row actions: hidden until the row is hovered (or always shown on
+   touch, where there's no hover). Glyph brightens, no fill. */
+.row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  flex: 0 0 auto;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+@media (hover: hover) {
+  .tree-row:hover .row-actions {
+    opacity: 1;
+  }
+}
+@media (hover: none) {
+  .row-actions {
+    opacity: 0.55;
+  }
+}
+.row-act {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  color: var(--faded);
+  border-radius: 5px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.row-act svg {
+  width: 13px;
+  height: 13px;
+  stroke-width: 1.8;
+}
+.row-act:active {
+  transform: scale(0.94);
+}
+@media (hover: hover) {
+  .row-act:hover {
+    color: var(--text);
+  }
+}
+@media (pointer: coarse) {
+  .row-act {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* Edge affordance to open the overlay sidebar on narrow widths. */
+.side-edge {
+  position: fixed;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 39;
+  width: 22px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.side-edge-bar {
+  width: 4px;
+  height: 34px;
+  border-radius: 4px;
+  background: var(--hairline);
+}
+@media (hover: hover) {
+  .side-edge:hover .side-edge-bar {
+    background: var(--secondary);
+  }
+}
+
+@media (pointer: coarse) {
+  .tree-row {
+    height: 44px;
+  }
+  .micro-row {
+    height: 40px;
+  }
+}
+
+/* ───────────────────────────────────────────────────────────
+   v1.0 — toast (undo) + offline state
+   ─────────────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 18px);
+  transform: translateX(-50%);
+  z-index: 70;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 28px);
+  padding: 9px 14px;
+  background: var(--surface);
+  border: 0.5px solid var(--hairline);
+  border-radius: 999px;
+  font-size: 12.5px;
+  color: var(--text);
+  animation: toast-in 160ms ease both;
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 6px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+.toast-msg {
+  color: var(--secondary);
+}
+.toast-sep {
+  color: var(--faded);
+}
+.toast-action {
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 12.5px;
+  cursor: pointer;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.netstate {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 14px);
+  transform: translateX(-50%);
+  z-index: 41;
+  font-size: 11px;
+  color: var(--faded);
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
+/* ───────────────────────────────────────────────────────────
+   v2.1 — auto-linking whisper. Narrate the magic in a whisper: a small,
+   inline, low-contrast, self-dismissing status line — never a popup/banner.
+   ─────────────────────────────────────────────────────────── */
+.whisper {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom) + 14px);
+  transform: translateX(-50%);
+  z-index: 41;
+  max-width: min(90vw, 460px);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--link); /* #9b9b9b — present enough to inform, quiet to ignore */
+  text-align: center;
+  pointer-events: none; /* ignorable by default */
+  user-select: none;
+  animation: whisper-in 220ms ease both;
+}
+.whisper .sprite {
+  width: 7px;
+  height: 7px;
+} /* the small ink square (#1a1a1a via --accent) */
+.whisper-tap {
+  pointer-events: auto;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  color: var(--link);
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (hover: hover) {
+  .whisper-tap:hover {
+    color: var(--text);
+  }
+}
+@media (pointer: coarse) {
+  .whisper-tap {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+}
+@keyframes whisper-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ───────────────────────────────────────────────────────────
+   v0.9 — attachments (one inline pill) + preview peek + ask control
+   ─────────────────────────────────────────────────────────── */
+
+/* One quiet inline pill per upload — never a card. Same for every type;
+   only the glyph differs. The ink square sprite = "in the truth layer". */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  vertical-align: baseline;
+  margin: 0 1px;
+  padding: 1px 7px;
+  border: 0.5px solid var(--hairline);
+  border-radius: 999px;
+  background: var(--surface);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  font-size: 0.86em;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.pill-glyph {
+  width: 13px;
+  height: 13px;
+  stroke-width: 1.8;
+  color: var(--secondary);
+  flex: 0 0 auto;
+}
+.pill-name {
+  color: var(--text);
+  max-width: 14em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pill .sprite {
+  width: 7px;
+  height: 7px;
+}
+.pill-failed {
+  opacity: 0.55;
+}
+.pill-failed .pill-glyph {
+  color: var(--faded);
+}
+@media (hover: hover) {
+  .pill:hover {
+    border-color: var(--accent);
+  }
+}
+
+/* Preview peek — summoned, recedes. Monochrome by default; colour on toggle. */
+.attach-peek-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 64;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none; /* only the framed panel catches taps */
+}
+.attach-peek {
+  pointer-events: auto;
+  width: min(560px, calc(100vw - 28px));
+  max-height: min(72vh, 680px);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 0.5px solid var(--hairline);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.attach-peek-body {
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 16px;
+}
+.attach-md {
+  margin: 0;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.attach-img {
+  max-width: 100%;
+  display: block;
+  border-radius: 6px;
+}
+.attach-img.mono {
+  filter: grayscale(1);
+}
+.attach-peek-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-top: 0.5px solid var(--hairline);
+}
+.attach-cap {
+  font-size: 11px;
+  color: var(--faded);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.attach-toggle {
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 12px;
+  cursor: pointer;
+  flex: 0 0 auto;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* The single quiet "ask" control on a selection — current font, no chrome. */
+
+/* ───────────────────────────────────────────────────────────
+   v1.7 — micro-note breakdown (grounded ELI5, summoned panel)
+   ─────────────────────────────────────────────────────────── */
+/* A note is a destination: the breakdown is a full PAGE in the canvas, never a
+   popup. It sits beside the docked sidebar (left:280) so the tree stays usable;
+   z below the command field / sidebar overlay so those still summon over it. */
+.micro-page-layer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 35;
+  background: var(--canvas);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+.has-sidebar .micro-page-layer {
+  left: 216px;
+}
+.micro-page {
+  width: 100%;
+  max-width: var(--measure); /* 680px reading column */
+  margin: 0 auto;
+  padding: var(--space-6) clamp(var(--space-4), 6vw, var(--space-8));
+  padding-top: var(--space-8); /* clear the floating back chip */
+  padding-bottom: 40vh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4); /* 16px between sections */
+  font-size: var(--text-body);
+  line-height: var(--leading);
+  color: var(--ink);
+}
+
+/* The one navigation affordance for note pages (written + micro): go back to
+   where you came from. Floats top-left of the canvas region. */
+.nav-back {
+  position: fixed;
+  top: 14px;
+  left: 16px;
+  z-index: 42;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 12px 0 8px;
+  border: 0.5px solid var(--hairline);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--secondary);
+  font: inherit;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 12.5px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.has-sidebar .nav-back {
+  left: calc(216px + 16px);
+}
+.nav-back svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 1.8;
+}
+.nav-back:active {
+  transform: scale(0.97);
+}
+@media (hover: hover) {
+  .nav-back:hover {
+    color: var(--text);
+  }
+}
+@media (pointer: coarse) {
+  .nav-back {
+    height: 44px;
+    padding: 0 16px 0 12px;
+  }
+}
+.micro-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.micro-titlewrap {
+  min-width: 0;
+}
+/* Scoped to the breakdown panel — a bare .micro-title would tie on specificity
+   with the sidebar's micro-note rows and (being later) make them big/bold. */
+.micro-page .micro-title {
+  font-size: var(--text-title); /* 16px / 600 — consistent with the editor */
+  font-weight: 600;
+  color: var(--ink);
+}
+.micro-gist {
+  margin-top: var(--space-1);
+  color: var(--faded);
+  font-size: var(--text-small);
+}
+.micro-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  border: none;
+  background: transparent;
+  color: var(--faded);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.micro-refresh svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 1.8;
+}
+.micro-refresh:active {
+  transform: scale(0.94);
+}
+@media (hover: hover) {
+  .micro-refresh:hover {
+    color: var(--text);
+  }
+}
+.micro-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--secondary);
+  font-size: var(--text-body);
+}
+.micro-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2); /* 8px within a section: label → body */
+}
+.micro-label {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #bcbcbc; /* faded section label — consistent across every template */
+}
+.micro-body {
+  margin: 0;
+  color: #3a3a3a; /* calm body ink — same rhythm in every template */
+  font-size: 0.98em;
+  line-height: 1.65;
+  border-radius: 6px;
+  outline: none;
+  transition: background-color 120ms ease;
+}
+/* Every field is editable in place — a quiet focus tint, no chrome. */
+.micro-body:focus {
+  background: #f7f7f7;
+  box-shadow: 0 0 0 6px #f7f7f7;
+}
+/* Actions row (regenerate · dismiss) sits at the top-right of the page. */
+.micro-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+.micro-connects {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.micro-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 30px;
+  padding: var(--space-1) 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: var(--link);
+  font: inherit;
+  font-size: var(--text-body);
+  text-decoration: underline dotted;
+  text-decoration-color: var(--link-line);
+  text-underline-offset: 3px;
+  -webkit-tap-highlight-color: transparent;
+}
+.micro-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-label);
+  color: var(--secondary);
+}
+.micro-foot .sprite {
+  width: 7px;
+  height: 7px;
+}
+.micro-empty {
+  color: var(--secondary);
+  font-size: var(--text-body);
+}
+@media (pointer: coarse) {
+  .micro-link {
+    min-height: 44px;
+  }
+}
+
+/* ── v3.4 — generated atomic note body (live TipTap: prose/checks/tables/lists) ── */
+.micro-note-body {
+  outline: none;
+  font-size: var(--text-body);
+  line-height: var(--leading);
+  color: var(--ink);
+}
+.micro-note-body > * {
+  margin: 0 0 var(--space-2);
+}
+.micro-note-body h2 {
+  font-size: var(--text-h2);
+  font-weight: 600;
+  margin: var(--space-4) 0 var(--space-2);
+}
+.micro-note-body h3 {
+  font-size: var(--text-body);
+  font-weight: 600;
+  margin: var(--space-3) 0 var(--space-1);
+}
+.micro-note-body ul,
+.micro-note-body ol {
+  padding-left: var(--space-4);
+}
+.micro-note-body li {
+  margin: 0 0 var(--space-1);
+}
+.micro-note-body code {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  background: var(--active);
+  border-radius: var(--space-1);
+  padding: 0 var(--space-1);
+}
+.micro-note-body hr {
+  border: none;
+  border-top: 0.5px solid var(--hairline);
+  margin: var(--space-4) 0;
+}
+.micro-note-body img {
+  max-width: 100%;
+  border-radius: var(--space-2);
+  display: block;
+}
+/* Task list — real checkboxes, checkable. */
+.micro-note-body ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+.micro-note-body ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.micro-note-body ul[data-type="taskList"] li > label {
+  flex: 0 0 auto;
+  margin-top: 3px;
+  user-select: none;
+}
+.micro-note-body ul[data-type="taskList"] li > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.micro-note-body input[type="checkbox"] {
+  accent-color: var(--ink);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+/* Tables — quiet hairline grid, compact. */
+.micro-note-body table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: var(--text-small);
+  table-layout: fixed;
+}
+.micro-note-body th,
+.micro-note-body td {
+  border: 0.5px solid var(--hairline);
+  padding: var(--space-1) var(--space-2);
+  text-align: left;
+  vertical-align: top;
+}
+.micro-note-body th {
+  font-weight: 600;
+  background: var(--active);
+}
+.micro-note-body table p {
+  margin: 0;
+}
+/* Ungrounded → the whole note reads as a provisional grey draft. */
+.micro-note-body.ghost {
+  color: var(--secondary);
+}
+.micro-note-body.ghost th {
+  background: transparent;
+}
+
+/* Activity strip — git-contribution style: one tiny square per day, ink
+   intensity by notes added that day. Left-aligned, very compact, no grey. */
+.act-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  justify-content: flex-start; /* left aligned */
+  padding: 6px 2px 2px;
+}
+.act-cell {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  flex: 0 0 auto;
+  background: color-mix(in srgb, var(--accent) 6%, var(--canvas)); /* empty day — faint ink tint, never grey */
+}
+.act-cell.lvl1 {
+  background: color-mix(in srgb, var(--accent) 28%, var(--canvas));
+}
+.act-cell.lvl2 {
+  background: color-mix(in srgb, var(--accent) 52%, var(--canvas));
+}
+.act-cell.lvl3 {
+  background: color-mix(in srgb, var(--accent) 76%, var(--canvas));
+}
+.act-cell.lvl4 {
+  background: var(--accent);
+}
+
+/* ───────────────────────────────────────────────────────────
+   v1.8R — graph on React Flow (maximized map). The docked view is now the
+   connection blocks above; React Flow renders the expanded vault map only.
+   White / ink (v1.9). React Flow draws everything; we only theme it.
+   ─────────────────────────────────────────────────────────── */
+.rf-wrap {
+  position: relative;
+}
+.rf-wrap.mini {
+  width: 100%;
+  height: 116px; /* compact minimap — a glance, not a canvas */
+}
+.rf-wrap.max {
+  width: 100%;
+  height: min(74vh, 720px);
+}
+.rf-wrap .react-flow {
+  background: var(--canvas);
+  font-family: var(--font-mono), ui-monospace, monospace;
+}
+.rf-wrap.mini .react-flow__pane {
+  cursor: default;
+}
+.rf-wrap .react-flow__edge-path {
+  stroke-linecap: round;
+}
+/* Handles invisible + forced to node centre so straight edges run centre-to-
+   centre regardless of node size (paired with nodeOrigin=[0.5,0.5]). */
+.react-flow__handle.rf-handle {
+  width: 1px;
+  height: 1px;
+  min-width: 1px;
+  min-height: 1px;
+  background: transparent;
+  border: none;
+  opacity: 0;
+  pointer-events: none;
+  left: 50% !important;
+  top: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translate(-50%, -50%) !important;
+}
+/* The node IS the dot — a small SQUARE (matches the app's AI sprite); the
+   label floats beneath without affecting the box. */
+.rf-node {
+  position: relative;
+  box-sizing: border-box;
+  border-radius: 2px;
+  background: var(--surface);
+  border: 1.5px solid var(--link); /* grey outline, white fill */
+}
+.rf-node.micro {
+  border-style: solid;
+}
+.rf-node.anchor {
+  background: var(--accent); /* current note — ink fill, the "you are here" */
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(26, 26, 26, 0.08); /* subtle ring */
+}
+/* The docked MINI is a minimap: solid blocks, no lines, no borders, no shadow.
+   Squares alone show how many notes connect to the current one. */
+.rf-node.mini {
+  border: none;
+  border-radius: 2px;
+  background: var(--faded); /* connected note — quiet grey block */
+  box-shadow: none;
+}
+.rf-node.mini.anchor {
+  background: var(--accent); /* current note — ink block */
+  border: none;
+  box-shadow: none;
+}
+.rf-node.mini .rf-label {
+  display: none; /* a glance, not labels */
+}
+.rf-label {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 11px;
+  line-height: 1.25;
+  color: var(--text);
+  pointer-events: none;
+  user-select: none;
+  transition: opacity 140ms ease;
+}
+.rf-node.max .rf-label {
+  font-size: 12px;
+}
+.rf-node.anchor .rf-label {
+  color: var(--text);
+  font-weight: 600;
+}
+/* Level-of-detail: zoomed out → labels fade, except the anchor + hovered. */
+.rf-wrap.lod-far .rf-label {
+  opacity: 0;
+}
+.rf-wrap.lod-far .rf-node.anchor .rf-label {
+  opacity: 1;
+}
+.rf-node:hover .rf-label {
+  opacity: 1;
+}
+@media (hover: hover) {
+  .rf-node:hover {
+    border-color: var(--accent);
+  }
+}
+/* Bigger hit target on touch without enlarging the visual dot. */
+@media (pointer: coarse) {
+  .rf-node::after {
+    content: "";
+    position: absolute;
+    inset: -16px;
+    border-radius: 50%;
+  }
+}
+/* Controls + recenter — quiet white/ink, never RF's default blue. */
+.rf-wrap .react-flow__controls {
+  box-shadow: none;
+  border: 0.5px solid var(--hairline);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.rf-wrap .react-flow__controls-button {
+  background: var(--surface);
+  border-bottom: 0.5px solid var(--hairline);
+  color: var(--secondary);
+  width: 28px;
+  height: 28px;
+}
+.rf-wrap .react-flow__controls-button:hover {
+  background: var(--press);
+}
+.rf-wrap .react-flow__controls-button svg {
+  fill: var(--secondary);
+}
+.rf-recenter {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 12px 0 9px;
+  border: 0.5px solid var(--hairline);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--secondary);
+  font: inherit;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 12px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.rf-recenter svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 1.8;
+}
+@media (hover: hover) {
+  .rf-recenter:hover {
+    color: var(--text);
+  }
+}
+@media (pointer: coarse) {
+  .rf-recenter {
+    height: 44px;
+    padding: 0 16px 0 12px;
+  }
+  .rf-wrap .react-flow__controls-button {
+    width: 44px;
+    height: 44px;
+  }
 }

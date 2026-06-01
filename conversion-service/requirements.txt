@@ -1,0 +1,5 @@
+# Requires Python >= 3.10 (MarkItDown's floor). On 3.9 the install fails.
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+markitdown[all]>=0.1.1
