@@ -15,6 +15,7 @@ import { Image } from "@tiptap/extension-image";
 import { useEffect, useRef } from "react";
 import type { JSONContent } from "@tiptap/core";
 import { mdToDoc, docToMd } from "@/lib/markdownDoc";
+import { Citation } from "@/editor/citation";
 
 /**
  * The editable body of a generated atomic note (v3.4 Part 3). Renders the note's
@@ -45,6 +46,7 @@ export default function MicroNoteBody({
       Bold,
       Italic,
       Code,
+      Citation,
       HorizontalRule,
       BulletList,
       OrderedList,

@@ -15,19 +15,32 @@ import type { JSONContent } from "@tiptap/core";
 
 type Inline = JSONContent;
 
-// ── Inline: **bold**, *italic*/_italic_, `code` → text nodes with marks ──
+// ── Inline: [[cite:N:url]], **bold**, *italic*/_italic_, `code` → text nodes ──
+// `[[cite:N:url]]` (emitted by /api/research) becomes a "citation"-marked text
+// node whose text is the number N and whose mark carries the real source URL —
+// rendered as a blue, tappable superscript marker.
 function parseInline(text: string): Inline[] {
   const out: Inline[] = [];
-  // Tokenize on the three inline markers, longest-first so ** beats *.
-  const re = /(\*\*([^*]+)\*\*|__([^_]+)__|\*([^*]+)\*|_([^_]+)_|`([^`]+)`)/g;
+  // Tokenize on the inline markers, longest-first so ** beats * and cite wins.
+  const re =
+    /(\[\[cite:(\d+):([^\]]+)\]\]|\*\*([^*]+)\*\*|__([^_]+)__|\*([^*]+)\*|_([^_]+)_|`([^`]+)`)/g;
   let last = 0;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
     if (m.index > last) out.push({ type: "text", text: text.slice(last, m.index) });
-    const bold = m[2] ?? m[3];
-    const italic = m[4] ?? m[5];
-    const code = m[6];
-    if (bold != null) out.push({ type: "text", text: bold, marks: [{ type: "bold" }] });
+    const citeN = m[2];
+    const citeUrl = m[3];
+    const bold = m[4] ?? m[5];
+    const italic = m[6] ?? m[7];
+    const code = m[8];
+    if (citeN != null)
+      out.push({
+        type: "text",
+        text: citeN,
+        marks: [{ type: "citation", attrs: { n: Number(citeN), href: citeUrl } }],
+      });
+    else if (bold != null)
+      out.push({ type: "text", text: bold, marks: [{ type: "bold" }] });
     else if (italic != null)
       out.push({ type: "text", text: italic, marks: [{ type: "italic" }] });
     else if (code != null)
@@ -194,6 +207,9 @@ function inlineToMd(nodes: JSONContent[] | undefined): string {
       if (n.type !== "text") return "";
       let t = n.text ?? "";
       for (const mark of n.marks || []) {
+        // A citation serializes from its attrs (the visible text is just N).
+        if (mark.type === "citation")
+          return `[[cite:${mark.attrs?.n ?? t}:${mark.attrs?.href ?? ""}]]`;
         if (mark.type === "bold") t = `**${t}**`;
         else if (mark.type === "italic") t = `*${t}*`;
         else if (mark.type === "code") t = `\`${t}\``;

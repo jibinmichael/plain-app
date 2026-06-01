@@ -28,10 +28,14 @@ export type NoteMeta = {
  * tables/lists), rendered as live TipTap. `grounded` true → drawn from the
  * user's sources (cited); false → a provisional general-knowledge note (ghost).
  */
+// A real web source backing a cited claim (numbered, named, tappable).
+export type WebSource = { n: number; name: string; domain: string; url: string };
+
 export type NoteBreakdown = {
   grounded: boolean;
   markdown: string; // the generated note body, as markdown
   sources: string[]; // cited note/source titles ("from your notes · …")
+  webSources?: WebSource[]; // real web citations (numbered SOURCES list)
   generatedAt: number;
 };
 

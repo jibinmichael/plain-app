@@ -19,6 +19,7 @@
   --fetched: #8a8a8a;
   --link: #9b9b9b; /* quiet grey - link text */
   --link-line: #cfcfcf; /* quieter grey - link underline */
+  --cite: #2563eb; /* citation markers + source numbers — the one blue accent */
   --border: #efefef;
   /* one step above the canvas */
   --surface: #fafafa;
@@ -410,7 +411,7 @@ body {
   min-height: calc(var(--text-body) * var(--leading));
 }
 .ProseMirror p.ph-title::before {
-  content: "Untitled";
+  content: "Name this note";
   font-size: var(--text-title);
   font-weight: 600;
   color: var(--faded);
@@ -421,9 +422,14 @@ body {
   font-weight: 600;
   color: var(--faded);
 }
+/* The body placeholder doubles as a one-line teaching cue for first-timers —
+   "just type, and it helps". It's longer than the column on a phone, so let it
+   wrap (overriding the .ph nowrap) within the reading measure. */
 .ProseMirror p.ph-body::before {
-  content: "Start writing…";
+  content: "Start writing — pause anytime and I'll suggest what comes next.";
   color: var(--faded);
+  white-space: normal;
+  max-width: 100%;
 }
 
 /* Origin marks */
@@ -504,12 +510,70 @@ body {
   }
 }
 
-/* ── Ghost suggestion — just grey text, no chrome (v3.4) ─────── */
-/* Faint grey = provisional, not yours yet. It simply sits there; the user types
-   past it to dismiss, or Tab/tap silently accepts. No keep/ignore affordance. */
+/* ── Ghost suggestion — a soft GRADIENT-FILLED run, no chrome ─────── */
+/* The assistant's words, clearly not yours yet (like iA's coloured AI text):
+   a warm→cool gradient fill that reads as "borrowed, provisional". It simply
+   sits there; the user types past it to dismiss, or Tab/tap silently accepts —
+   the kept text then turns real --ink black. No keep/ignore affordance. */
 .ghost-text {
-  color: color-mix(in srgb, var(--accent) 28%, var(--faded));
+  /* A single quiet slate-blue with a lighter tint mid-band — clipped to the
+     text and swept slowly so it gently shimmers/breathes (not a rainbow). */
+  background-image: linear-gradient(100deg, #9aa0c4 0%, #c4c8e4 50%, #9aa0c4 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
   cursor: pointer;
+  /* fade in on arrival + a slow ~2.4s shimmer sweep so it feels alive */
+  animation: ghost-in 350ms ease both, ghost-shimmer 2.4s ease-in-out 350ms infinite;
+}
+@keyframes ghost-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes ghost-shimmer {
+  0%,
+  100% {
+    background-position: 0% 0;
+  }
+  50% {
+    background-position: 100% 0;
+  }
+}
+
+/* The "thinking…" cue — faint, italic, gently pulsing at the caret while the
+   suggestion is on its way. Tells the writer help is coming. */
+.ghost-thinking {
+  color: var(--faded);
+  font-style: italic;
+  user-select: none;
+  pointer-events: none;
+  animation: ghost-pulse 1.1s ease-in-out infinite;
+}
+@keyframes ghost-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+/* Respect reduced motion: no pulse, no fade, no drift — just show/hide. */
+@media (prefers-reduced-motion: reduce) {
+  .ghost-text {
+    animation: none;
+  }
+  .ghost-thinking {
+    animation: none;
+    opacity: 0.6;
+  }
 }
 
 /* ── Inset ask block (lives in the page, not a chatbox) ────── */
@@ -1356,12 +1420,7 @@ body {
     color: var(--text);
   }
 }
-@media (pointer: coarse) {
-  .row-act {
-    width: 40px;
-    height: 40px;
-  }
-}
+/* (.row-act touch sizing consolidated into the coarse block below.) */
 
 /* Edge affordance to open the overlay sidebar on narrow widths. */
 .side-edge {
@@ -1397,7 +1456,23 @@ body {
     height: 44px;
   }
   .micro-row {
-    height: 40px;
+    height: 44px;
+  }
+  /* Every icon button gets a ≥44px hit area on touch (Apple HIG). The glyph
+     inside stays its small size — only the tappable box grows. */
+  .cir,
+  .glyph,
+  .micro-refresh {
+    width: 44px;
+    height: 44px;
+  }
+  .row-act {
+    width: 44px;
+    height: 44px;
+  }
+  /* The drawer edge: a thin visible bar, but a comfortable-width tap zone. */
+  .side-edge {
+    width: 44px;
   }
 }
 
@@ -1952,6 +2027,90 @@ body {
 }
 .micro-note-body.ghost th {
   background: transparent;
+}
+
+/* ── Citations — blue superscript markers on cited claims + SOURCES list ── */
+/* The one blue accent in the app: a tappable numeric marker inline, mirrored by
+   a numbered, named, tappable source below. Even in a provisional grey draft the
+   marker stays blue so a cited claim always reads as backed. */
+.cite-marker {
+  font-size: 0.7em;
+  line-height: 0;
+  vertical-align: super;
+  margin-left: 1px;
+}
+.cite-marker a,
+.cite-marker a:visited {
+  color: var(--cite);
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .cite-marker a:hover {
+    text-decoration: underline;
+  }
+}
+
+.sources-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.source-item {
+  margin: 0;
+}
+.source-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 30px;
+  padding: var(--space-1) 0;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: var(--text-small);
+  -webkit-tap-highlight-color: transparent;
+}
+.source-n {
+  flex: 0 0 auto;
+  min-width: 16px;
+  text-align: center;
+  color: var(--cite); /* blue source number — matches the inline marker */
+  font-weight: 600;
+}
+.source-name {
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.source-domain {
+  flex: 0 1 auto;
+  color: var(--faded);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.source-ext {
+  flex: 0 0 auto;
+  width: 13px;
+  height: 13px;
+  color: var(--faded);
+  stroke-width: 1.8;
+  margin-left: auto;
+}
+@media (hover: hover) {
+  .source-link:hover .source-name {
+    text-decoration: underline;
+  }
+}
+@media (pointer: coarse) {
+  .source-link {
+    min-height: 44px;
+  }
 }
 
 /* Activity strip — git-contribution style: one tiny square per day, ink

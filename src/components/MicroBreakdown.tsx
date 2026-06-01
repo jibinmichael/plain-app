@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { IconRefresh, IconTrash } from "@tabler/icons-react";
+import { IconTrash, IconExternalLink } from "@tabler/icons-react";
 import {
   type NoteRecord,
   type NoteBreakdown,
+  type WebSource,
   groundingSources,
   noteConcepts,
   noteText,
@@ -91,6 +92,34 @@ export default function MicroBreakdown({
           sources?: string[];
         };
         let markdown = d.markdown || "";
+        let grounded = !!d.grounded;
+        let webSources: WebSource[] = [];
+
+        // Grounded-or-ghost: the user's own notes/sources are cited as before
+        // (grounded === "from your notes"). When nothing local grounds it, reach
+        // for real web sources rather than leaving a bare provisional ghost — web
+        // facts come back with their own numbered citations. If the web finds
+        // nothing reputable, we keep the provisional draft (never a fake source).
+        if (!grounded) {
+          try {
+            const rRes = await fetch("/api/research", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ concept }),
+            });
+            const r = (await rRes.json()) as {
+              grounded?: boolean;
+              markdown?: string;
+              sources?: WebSource[];
+            };
+            if (r.grounded && r.markdown && r.sources?.length) {
+              markdown = r.markdown;
+              webSources = r.sources;
+            }
+          } catch {
+            /* web research unavailable → keep the provisional draft */
+          }
+        }
 
         // Part 4: find a relevant image online and embed it INLINE (downscaled,
         // persisted as a data URL). Best-effort + silent — if search/embed/key
@@ -128,9 +157,10 @@ export default function MicroBreakdown({
         }
 
         const bd: NoteBreakdown = {
-          grounded: !!d.grounded,
+          grounded,
           markdown,
           sources: d.sources || [],
+          webSources,
           generatedAt: Date.now(),
         };
         setData(bd);
@@ -168,10 +198,6 @@ export default function MicroBreakdown({
     return () => window.removeEventListener("keydown", onKey);
   }, [note, onClose]);
 
-  const refresh = () => {
-    if (note) void generate(note.title, note.id);
-  };
-
   // Persist edits to the note body (debounced-ish via the editor's own updates).
   const dataRef = useRef(data);
   dataRef.current = data;
@@ -203,15 +229,6 @@ export default function MicroBreakdown({
             <button
               className="micro-refresh"
               onMouseDown={(e) => e.preventDefault()}
-              onClick={refresh}
-              aria-label="Regenerate"
-              title="Regenerate"
-            >
-              <IconRefresh aria-hidden="true" />
-            </button>
-            <button
-              className="micro-refresh"
-              onMouseDown={(e) => e.preventDefault()}
               onClick={() => onDismiss(note.id)}
               aria-label="Dismiss this note (won't suggest again)"
               title="Dismiss (won't suggest again)"
@@ -230,7 +247,10 @@ export default function MicroBreakdown({
                 <MicroNoteBody
                   key={data!.generatedAt}
                   markdown={data!.markdown}
-                  ghost={!data!.grounded}
+                  // Web-cited content is trustworthy (real sources) → render as
+                  // real ink, not the faded provisional ghost. Only a draft with
+                  // neither local nor web grounding stays grey.
+                  ghost={!data!.grounded && !(data!.webSources?.length)}
                   onChange={editBody}
                 />
                 <div className="micro-foot">
@@ -238,8 +258,35 @@ export default function MicroBreakdown({
                     ? `from your notes${
                         data!.sources.length > 0 ? ` · ${data!.sources.join(", ")}` : ""
                       }`
+                    : data!.webSources?.length
+                    ? "from the web"
                     : "draft · provisional — edit or keep"}
                 </div>
+
+                {/* Real, named, popular web sources — number · name · domain,
+                    each tappable to open the source in a new tab. */}
+                {!!data!.webSources?.length && (
+                  <section className="micro-section">
+                    <div className="micro-label">Sources</div>
+                    <ol className="sources-list">
+                      {data!.webSources!.map((s) => (
+                        <li key={s.n} className="source-item">
+                          <a
+                            className="source-link"
+                            href={s.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <span className="source-n">{s.n}</span>
+                            <span className="source-name">{s.name}</span>
+                            <span className="source-domain">{s.domain}</span>
+                            <IconExternalLink className="source-ext" aria-hidden="true" />
+                          </a>
+                        </li>
+                      ))}
+                    </ol>
+                  </section>
+                )}
               </>
             )}
 

@@ -19,7 +19,7 @@ import { VerbTag } from "@/editor/verbTag";
 import { Reference } from "@/editor/reference";
 import { AutoLink, setTitleIndex } from "@/editor/autoLink";
 import { MarkdownSyntax } from "@/editor/markdownSyntax";
-import { GhostFill, setGhost } from "@/editor/ghostFill";
+import { GhostFill, setGhost, setThinking, clearGhost } from "@/editor/ghostFill";
 import { findPhraseSpan } from "@/editor/textmatch";
 import {
   Attachment,
@@ -61,7 +61,10 @@ import Toast, { type ToastState } from "./Toast";
 import AttachPeek, { type PeekData } from "./AttachPeek";
 import MicroBreakdown from "./MicroBreakdown";
 
-const PAUSE_MS = 1000;
+// Near-instant ghost: a short pause (not every keystroke) kicks off the fetch,
+// and the "thinking…" cue appears immediately so the pause never feels frozen.
+// AbortController cancels stale calls, so firing eagerly is cheap.
+const PAUSE_MS = 250;
 const SAVE_MS = 500;
 const CONCEPT_MS = 1200;
 const SEED_KEY = "seed-version";
@@ -370,6 +373,9 @@ export default function Editor() {
       abortRef.current?.abort();
       const ctrl = new AbortController();
       abortRef.current = ctrl;
+      // Show the pulsing "thinking…" cue at once so the pause reads as "help is
+      // coming", not frozen — it sits there until the ghost lands or we bail.
+      setThinking(view, from);
       try {
         const res = await fetch("/api/ground", {
           method: "POST",
@@ -384,13 +390,20 @@ export default function Editor() {
         const data = (await res.json()) as { grounded: boolean; text?: string };
         if (id !== reqId.current) return;
         const v = editor.view;
-        if (v.state.selection.from !== from || !v.state.selection.empty) return;
+        if (v.state.selection.from !== from || !v.state.selection.empty) {
+          clearGhost(v);
+          return;
+        }
         // Grounded-or-ghost: show the suggestion whenever there's text — grounded
         // (cited) or an ungrounded general-knowledge fallback. Both render as the
-        // same provisional grey ghost; neither auto-commits.
+        // same provisional gradient ghost; neither auto-commits. No text → drop
+        // the thinking cue so it never hangs.
         if (data.text) setGhost(v, data.text, from);
+        else clearGhost(v);
       } catch {
-        /* aborted or network hiccup → silence */
+        // Aborted (stale) → the newer call owns the cue; a real failure → clear
+        // ours so "thinking…" never sticks. Only touch state if still current.
+        if (id === reqId.current && !ctrl.signal.aborted) clearGhost(editor.view);
       }
     };
     editor.on("update", schedule);
