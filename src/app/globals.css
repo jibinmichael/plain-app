@@ -1,31 +1,32 @@
 @import "tailwindcss";
 
-/* Apercu Pro (self-hosted from /public/fonts). Wired to --font-mono so every
-   surface uses it. Medium is mapped to 600 (headings) and Bold to 700. */
+/* Graphik (self-hosted from /public/fonts). NOTE: TRIAL files — fine for local
+   testing; a licensed build is required before public/production use. Wired to
+   --font-mono so every surface uses it. Semibold → 600 (headings), Bold → 700. */
 @font-face {
-  font-family: "Apercu Pro";
-  src: url("/fonts/apercu_regular_pro.otf") format("opentype");
+  font-family: "Graphik";
+  src: url("/fonts/Graphik-Regular-Trial.otf") format("opentype");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
-  font-family: "Apercu Pro";
-  src: url("/fonts/apercu_regular_italic_pro.otf") format("opentype");
+  font-family: "Graphik";
+  src: url("/fonts/Graphik-RegularItalic-Trial.otf") format("opentype");
   font-weight: 400;
   font-style: italic;
   font-display: swap;
 }
 @font-face {
-  font-family: "Apercu Pro";
-  src: url("/fonts/apercu_medium_pro.otf") format("opentype");
+  font-family: "Graphik";
+  src: url("/fonts/Graphik-Semibold-Trial.otf") format("opentype");
   font-weight: 600;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
-  font-family: "Apercu Pro";
-  src: url("/fonts/apercu_bold_pro.otf") format("opentype");
+  font-family: "Graphik";
+  src: url("/fonts/Graphik-Bold-Trial.otf") format("opentype");
   font-weight: 700;
   font-style: normal;
   font-display: swap;

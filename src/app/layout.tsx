@@ -2,12 +2,12 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import RegisterSW from "@/components/RegisterSW";
 
-// Apercu Pro (self-hosted, see @font-face in globals.css) with a system-sans
+// Graphik (self-hosted, see @font-face in globals.css) with a system-sans
 // fallback, so it renders everywhere and degrades cleanly if the font fails to
 // load. Wired to --font-mono, which every surface already reads, so the whole
 // app (editor, sidebar, command field, notes, graph) switches.
 const fontStack =
-  '"Apercu Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+  '"Graphik", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 
 export const metadata: Metadata = {
   title: "plain",
