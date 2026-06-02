@@ -2,7 +2,8 @@
 
 /* Graphik (self-hosted from /public/fonts). NOTE: TRIAL files — fine for local
    testing; a licensed build is required before public/production use. Wired to
-   --font-mono so every surface uses it. Semibold → 600 (headings), Bold → 700. */
+   --font-mono so every surface uses it. Semibold → 600 is the heaviest weight
+   (no bold). */
 @font-face {
   font-family: "Graphik";
   src: url("/fonts/Graphik-Regular-Trial.otf") format("opentype");
@@ -24,12 +25,11 @@
   font-style: normal;
   font-display: swap;
 }
-@font-face {
-  font-family: "Graphik";
-  src: url("/fonts/Graphik-Bold-Trial.otf") format("opentype");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
+/* Semibold (600) is intentionally the heaviest face — no Bold (700). Bold text
+   (e.g. **markdown** in generated notes) is capped to 600 below. */
+strong,
+b {
+  font-weight: 600;
 }
 
 /* ───────────────────────────────────────────────────────────
@@ -874,7 +874,7 @@ body {
 .cmd-drawn-label {
   padding: var(--space-1) var(--space-2);
   font-size: var(--text-label);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.5px;
   text-transform: uppercase;
   color: var(--faded);
